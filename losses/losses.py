@@ -27,6 +27,7 @@ class GaussianLoss(nn.Module):
         self.device = param['device']
         self.mean = param['mean']
         self.var = param['var']
+        self.num_classes = param['num_classes']
 
 
     def forward(self, y_pr, y_gt, sample):
@@ -34,8 +35,11 @@ class GaussianLoss(nn.Module):
         if type(y_pr) is tuple:
             ft = y_pr[1]
             y_pr = y_pr[0]
+        else:
+            ft = y_pr
 
-        comp = 1
+
+        comp = 0
 
         if comp == 1:
             n, c, h, w = y_pr.size()
@@ -62,7 +66,7 @@ class GaussianLoss(nn.Module):
             ft = ft.reshape(n*w*h, c)
             ft = ft[y_gt_mask, :]
 
-            loss = y_pr*one_hot
+            loss = y_pr * one_hot
 
             to_add = ft ** 2
             to_add = torch.sum(to_add)
@@ -73,15 +77,12 @@ class GaussianLoss(nn.Module):
             return loss
 
         else:
-            n, c, h, w = y_pr.size()
             y_gt = y_gt.long()
-
             y_gt = y_gt.flatten()
-            y_gt_mask = (y_gt >= 0) & (y_gt < c)
-
+            y_gt_mask = (y_gt >= 0) & (y_gt < self.num_classes)
             y_gt = y_gt[y_gt_mask].long()
 
-            II = torch.eye(c)
+            II = torch.eye(self.num_classes)
             one_hot = II[y_gt]
 
             one_hot = one_hot.to(self.device)
@@ -91,6 +92,8 @@ class GaussianLoss(nn.Module):
             ft = ft.transpose(2, 3)
             ft = ft.reshape(n * w * h, c)
             ft = ft[y_gt_mask, :]
+
+
 
             loss = (ft - self.mean) ** 2
             loss = torch.sum(loss, dim=1)

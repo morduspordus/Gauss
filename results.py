@@ -1,3 +1,17 @@
+## NEW RESULTS
+
+# On OxfordPet, 2 classes
+# {'acc': array(0.92255694, dtype=float32), 'fscore': array(0.8717927, dtype=float32), 'jaccard': array(0.8042548, dtype=float32), 'miou': array(0.84533525, dtype=float32), 'acc_class': array(0.9244877, dtype=float32)}
+
+# On OxfordPed, 3 classes
+# acc: 0.809112012386322, fscore: 0.6950455904006958, jaccard: 0.4236198961734772, miou: 0.5895310044288635, acc_class: 0.7907080054283142,
+
+#ON MSRA
+# acc: 0.8870965242385864, fscore: 0.7340942621231079, jaccard: 0.5693441033363342, miou: 0.7183158993721008, acc_class: 0.8222122192382812,
+
+#ON ECSSD: acc: 0.8660160303115845, fscore: 0.7175257205963135, jaccard: 0.5610008239746094, miou: 0.6996684074401855, acc_class: 0.8161179423332214,
+
+## OLD RESULTS
 
 # OxfordPet 3 classes, new results
 # CE: fscore: 0.9406614303588867, jaccard: 0.803737998008728, miou: 0.8626742362976074, acc_class: 0.9209012389183044,

@@ -5,8 +5,8 @@ from metrics.evaluator import Evaluator
 def get_standard_arguments(model_name, dataset_name, im_size):
 
     args = {}
-    args['data_dir'] = 'd:\\Olga'
-    # args['data_dir'] = 'c:\\users\\oveksler\\home'
+    # args['data_dir'] = 'd:\\Olga'
+    args['data_dir'] = 'c:\\users\\oveksler\\home'
     # args['data_dir'] = 'c:\\Home'
 
     args.update(get_dataset_args(args, dataset_name))   # gets argument related to datasets
@@ -60,7 +60,7 @@ def get_standard_arguments(model_name, dataset_name, im_size):
     args['verbose'] = True
 
     args['shuffle_train'] = True
-    args['num_workers'] = 4
+    args['num_workers'] = 0
     args['train_batch_size'] = 16
     args['val_batch_size'] = 16
 

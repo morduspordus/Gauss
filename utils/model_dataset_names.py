@@ -4,12 +4,12 @@ from dataloaders.datasets.SaliencyCommon import *
 from dataloaders.datasets.pascalSingleClass import *
 from dataloaders.datasets.pascalWebAugCombined import *
 from dataloaders.datasets.pascal import *
-from models.Unet.unet_fixed_features import MobileNetV2_Ft_Linear
+from models.Unet.unet_fixed_features import *
 
-model_names = ["MobileNetV2_Ft_Linear", "MobileNetV2_Ft_Linear"]
+model_names = ["MobileNetV2_Ft", "MobileNetV2_Ft_Linear"]
 
 
-model_classes = {"MobileNetV2_Ft_Linear": MobileNetV2_Ft_Linear, "MobileNetV2_Ft_Linear": MobileNetV2_Ft_Linear}
+model_classes = {"MobileNetV2_Ft": MobileNetV2_Ft, "MobileNetV2_Ft_Linear": MobileNetV2_Ft_Linear}
 
 singleclass_dataset_names = ['OxfordPet', 'MSRA',  'ECSSD', 'DUT', 'Diningtable', 'DUTS', 'SED2', 'HKU_IS', 'Thur', 'PascalS', 'SOD']
 pascal_multi_dataset_names = ['pascal']

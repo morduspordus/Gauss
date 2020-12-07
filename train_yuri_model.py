@@ -24,29 +24,28 @@ from train.training_utils import test_with_loaded_model
 import sys
 from tqdm import tqdm as tqdm
 import torch.nn as nn
+from utils.loss_sets import gaussian_loss
 
 
 def test_with_matrix(args, model_load, imageSaver=None, EvaluatorIn=None, ft_matrix=None):
 
     training_type = 'with_blah'
     model = get_model(args)
+
     if model_load is not None:
         model.load_state_dict(torch.load(model_load))
-    #bias = model.conv_layer.bias[:]
-    #print(bias)
 
-    to_replace = ft_matrix[:, 1539:].flatten()
+    num_classes, num_features = ft_matrix.size()
+    num_features = num_features - 1
+
+    to_replace = ft_matrix[:, num_features:].flatten()
     model.conv_layer.bias[:] = to_replace
 
-    to_replace = ft_matrix[:, 0:1539]
-    #to_replace = torch.rand(2, 1539).to(args['device'])
+    to_replace = ft_matrix[:, 0:num_features]
     to_replace = to_replace.unsqueeze(dim=2)
     to_replace = to_replace.unsqueeze(dim=2)
-
-    #print(ft_matrix[:, 0:1539], "\n")
 
     model.conv_layer.weight.data = to_replace
-    #print(model.conv_layer.weight, "\n")
 
     output_dir = './run/experiments/models'
 
@@ -58,52 +57,8 @@ def test_with_matrix(args, model_load, imageSaver=None, EvaluatorIn=None, ft_mat
     logs = test_with_loaded_model(args, model, imageSaver, EvaluatorIn)
     torch.save(model.state_dict(), model_save)
 
-
     return logs
 
-
-def one_stage_training_gauss(model_name, dataset_name, im_size, model_load, mean, var):
-
-    args = get_standard_arguments(model_name, dataset_name, im_size)
-    args['mean'] = mean
-    args['var'] = var
-
-    one_stage_training_with_args(model_name, dataset_name, im_size, model_load, args)
-
-def one_stage_training(model_name, dataset_name, im_size, model_load):
-
-    args = get_standard_arguments(model_name, dataset_name, im_size)
-
-    one_stage_training_with_args(model_name, dataset_name, im_size, model_load, args)
-
-def one_stage_training_with_args(model_name, dataset_name, im_size, model_load, args):
-    training_type = '_yuri_'
-
-    output_dir = './run/experiments/models'
-
-    add_to_file_path, model_save = create_file_name(dataset_name, model_name, im_size, training_type, output_dir)
-
-    num_epoch = 100
-    #args['use_fixed_features'] = False
-    args['num_epoch'] = num_epoch
-    args['model_load'] = model_load
-    #args['valid_dataset'] = False
-    args['model_load'] = model_load
-    # args['num_classes'] = 3
-    # args['cats_dogs_separate'] = True
-    # args['use_fixed_features'] = False
-    args['train_batch_size'] = 8
-
-    # args['mean'] = 1
-    # args['var'] = 1
-    _, args['loss_names'] = gaussian_loss(args)
-    #_, args['loss_names'] = cross_entropy_loss(ignore_class=255)
-
-    if model_load is not None:
-        print("Testing input model")
-        test_logs = T.test(args, model_load)
-
-    valid_logs, train_logs, valid_metric = T.train_normal(args, num_epoch, model_save, model_load)
 
 
 def my_own_test(ft_matrix, args, evaluatorIn, model_load):
@@ -133,7 +88,12 @@ def my_own_test(ft_matrix, args, evaluatorIn, model_load):
             y = sample['label']
 
             x, y = x.to(device), y.to(device)
-            pred, ft = model.forward(x)
+            out = model.forward(x)
+
+            if type(out) == tuple:
+                ft = out[1]
+            else:
+                ft = out
 
             [n, d, h, w] = list(ft.size())
             ft = torch.cat([ft, torch.ones(n, 1, h, w).to(device)], 1)
@@ -157,15 +117,15 @@ def my_own_test(ft_matrix, args, evaluatorIn, model_load):
 
 def compute_means_and_test(model_name, dataset_name, im_size):
 
-    model_load = './run/experiments/models/OxfordPet_MobileNetV2_Ft_Linear_64__with_CE__V1.pt'
-    #model_load = None
+    # model_load = './run/experiments/models/OxfordPet_MobileNetV2_Ft_Linear_128__with_CE__V1.pt'
+    model_load = None
 
     args = get_standard_arguments(model_name, dataset_name, im_size)
 
     args['num_features'] = 1539
     args['model_load'] = model_load
-    # args['num_classes'] = 3
-    # args['cats_dogs_separate'] = True
+    args['num_classes'] = 3
+    args['cats_dogs_separate'] = True
 
     evaluator = EvaluatorComputeMean
 
@@ -198,38 +158,16 @@ def compute_means_and_test(model_name, dataset_name, im_size):
     bias = torch.matmul(mean_by_var, mean_t)
     diag = torch.diagonal(bias)
 
-    nll = -torch.log(class_pr)
-    diag = diag + nll
+    # nll = -torch.log(class_pr)
+    # diag = diag + nll
 
     diag = torch.unsqueeze(diag, dim=1)
     ft_matrix = torch.cat((ft_matrix, diag), dim=1)
     #test_logs = test_with_matrix(args, model_load, imageSaver=imgSaver, ft_matrix=ft_matrix)
     my_own_test(ft_matrix, args, evaluatorIn=Evaluator, model_load=model_load)
 
-def train_one_model():
 
-    model_load  = './run/experiments/models/OxfordPet_yuri_128_with_blah_V1.pt'
-
-    one_stage_training(model_name=model_names[15],
-                       dataset_name=singleclass_dataset_names[0],
-                       im_size=128,
-                       model_load=model_load)
-
-def train_one_model_gauss():
-
-    model_load = './run/experiments/models/OxfordPet_yuri_128_with_blah_V1.pt'
-
-    model_name = model_names[1]
-    dataset_name = singleclass_dataset_names[0]
-    im_size = 128
-    model_load = model_load
-
-    args = get_standard_arguments(model_name, dataset_name, im_size)
-
-    args['num_features'] = 1539
-    args['model_load'] = model_load
-    # args['num_classes'] = 3
-    # args['cats_dogs_separate'] = True
+def compute_means_and_var(args, model_load=None, with_class_prob=False):
 
     evaluator = EvaluatorComputeMean
 
@@ -241,18 +179,51 @@ def train_one_model_gauss():
     mean = test_logs['metrics']['mean']
     var = test_logs['metrics']['variance'] + epsilon
 
-    one_stage_training_gauss(model_name=model_names[15],
-                       dataset_name=singleclass_dataset_names[0],
-                       im_size=128,
-                       model_load=model_load,
-                       mean=mean,
-                       var=var)
+    return mean, var
+
+def one_stage_training_gauss(args):
+
+    training_type = '_gauss_'
+
+    output_dir = './run/experiments/models'
+
+    add_to_file_path, model_save = create_file_name(dataset_name, model_name, im_size, training_type, output_dir)
+
+    num_epoch = 100
+
+    args['use_fixed_features'] = False
+    args['num_epoch'] = num_epoch
+    args['train_batch_size'] = 8
+
+    _, args['loss_names'] = gaussian_loss(args)
+
+    if model_load is not None:
+        print("Testing input model")
+        test_logs = T.test(args, model_load)
+
+    valid_logs, train_logs, valid_metric = T.train_normal(args, num_epoch, model_save, model_load)
 
 
 if __name__ == "__main__":
+    # model_load = None
+    # model_name = model_names[0]
+    # dataset_name = singleclass_dataset_names[0]
+    # im_size = 128
+    #
+    # args = get_standard_arguments(model_name, dataset_name, im_size)
+    #
+    # args['num_features'] = 1539
+    # args['model_load'] = model_load
+    # # args['num_classes'] = 3
+    # # args['cats_dogs_separate'] = True
+    #
+    # mean, var = compute_means_and_var(args)
+    # args['mean'] = mean
+    # args['var'] = var
+    # one_stage_training_gauss(args)
 
-    compute_means_and_test(model_name=model_names[1], dataset_name=singleclass_dataset_names[0], im_size=64)
+    compute_means_and_test(model_name=model_names[1], dataset_name=singleclass_dataset_names[0], im_size=128)
 
-    #train_one_model_gauss()
+
 
 

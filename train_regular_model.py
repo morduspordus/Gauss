@@ -42,8 +42,8 @@ def one_stage_training_with_args(model_name, dataset_name, im_size, model_load, 
 
     add_to_file_path, model_save = create_file_name(dataset_name, model_name, im_size, training_type, output_dir)
 
-    num_epoch = 3
-    args['use_fixed_features'] = False
+    num_epoch = 10
+    args['use_fixed_features'] = True
     args['num_epoch'] = num_epoch
     args['model_load'] = model_load
     args['model_load'] = model_load
@@ -60,6 +60,7 @@ def one_stage_training_with_args(model_name, dataset_name, im_size, model_load, 
 
     valid_logs, train_logs, valid_metric = T.train_normal(args, num_epoch, model_save, model_load)
 
+    save_args_outcome(add_to_file_path, args, valid_logs, valid_metric, output_dir)
 
 if __name__ == "__main__":
     
@@ -67,6 +68,6 @@ if __name__ == "__main__":
 
     one_stage_training(model_name=model_names[1],
                        dataset_name=singleclass_dataset_names[0],
-                       im_size=64,
+                       im_size=128,
                        model_load=model_load)
 
