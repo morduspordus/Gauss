@@ -1,13 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import datetime
-import os
-from PIL import Image
 import torch
-from losses.loss_utils import compute_edge_mask
-#from utils.get_model import get_model
-from utils.get_dataset import get_dataset
-#from utils.dir_dataset_model_names import *
 from dataloaders.utils import img_denormalize
 from dataloaders.utils import decode_segmap
 from utils.get_model import get_model

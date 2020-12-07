@@ -60,7 +60,6 @@ def test_with_matrix(args, model_load, imageSaver=None, EvaluatorIn=None, ft_mat
     return logs
 
 
-
 def my_own_test(ft_matrix, args, evaluatorIn, model_load):
     valid_dataset = get_val_dataset(args, args['split'])
     dataloader = torch.utils.data.DataLoader(valid_dataset, args['val_batch_size'], shuffle=False,
@@ -182,6 +181,23 @@ def compute_means_and_var_and_ft_matrix(args, model_load=None, with_class_prob=F
     var = test_logs['metrics']['variance'] + epsilon
     ft_matrix = test_logs['metrics']['feature_matrix']
 
+    class_sizes = ft_matrix[:, args['num_features']]
+    sum = torch.sum(class_sizes)
+    class_pr = class_sizes / sum
+
+    ft_matrix = mean / var
+    mean_by_var = -mean / (2 * var)
+    mean_t = torch.transpose(mean, 0, 1)
+    bias = torch.matmul(mean_by_var, mean_t)
+    diag = torch.diagonal(bias)
+
+    if with_class_prob:
+        nll = -torch.log(class_pr)
+        diag = diag + nll
+
+    diag = torch.unsqueeze(diag, dim=1)
+    ft_matrix = torch.cat((ft_matrix, diag), dim=1)
+
     return mean, var, ft_matrix
 
 def one_stage_training_gauss(args):
@@ -194,15 +210,16 @@ def one_stage_training_gauss(args):
 
     num_epoch = 100
 
-    args['use_fixed_features'] = False
     args['num_epoch'] = num_epoch
     args['train_batch_size'] = 8
 
     _, args['loss_names'] = gaussian_loss(args)
 
-    #if model_load is not None:
+
     print("Testing input model")
     test_logs = T.test(args, model_load)
+
+    args['use_fixed_features'] = False
 
     valid_logs, train_logs, valid_metric = T.train_normal(args, num_epoch, model_save, model_load)
 
@@ -217,13 +234,14 @@ if __name__ == "__main__":
 
     args['num_features'] = 1539
     args['model_load'] = model_load
-    # args['num_classes'] = 3
-    # args['cats_dogs_separate'] = True
+    args['num_classes'] = 3
+    args['cats_dogs_separate'] = True
 
     mean, var, ft_matrix = compute_means_and_var_and_ft_matrix(args)
     args['mean'] = mean
     args['var'] = var
     args['ft_matrix'] = ft_matrix
+    #print(ft_matrix)
     args['model_name'] = model_names[2]
     args['train_batch_size'] = 8
     args['val_batch_size'] = 8
@@ -234,7 +252,7 @@ if __name__ == "__main__":
     #
     # model_load = None
     # compute_means_and_test(model_name=model_names[1], dataset_name=singleclass_dataset_names[0], im_size=128, model_load=model_load)
-
+    #
 
 
 

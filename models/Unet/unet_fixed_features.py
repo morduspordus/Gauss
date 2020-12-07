@@ -130,4 +130,42 @@ class MobileNetV2_Ft_LinearFixed(MobileNetV2_Ft):
 
 
 
+#
+# class MobileNetV2_Ft_LinearFixed(MobileNetV2_Ft):
+#
+#     def __init__(self, args):
+#         super(MobileNetV2_Ft_LinearFixed, self).__init__(args)
+#
+#         self.ft_matrix = args['ft_matrix']
+#         self.device = args['device']
+#         self.num_features = args['num_features']
+#
+#         self.conv_layer = nn.Conv2d(self.num_features, self.num_classes, 1, 1, 0)
+#
+#         for param in self.conv_layer.parameters():
+#             param.requires_grad = False
+#
+#         to_replace = self.ft_matrix[:, self.num_features:].flatten()
+#         self.conv_layer.bias[:] = to_replace
+#
+#         to_replace = self.ft_matrix[:, 0:self.num_features]
+#         to_replace = to_replace.unsqueeze(dim=2)
+#         to_replace = to_replace.unsqueeze(dim=2)
+#
+#         self.conv_layer.weight.data = to_replace
+#
+#
+#     def forward(self, im):
+#
+#       ft = super(MobileNetV2_Ft_LinearFixed, self).forward(im)
+#
+#       out = self.conv_layer(ft)
+#
+#
+#       return out, ft
+#
+#
+
+
+
 
