@@ -39,7 +39,7 @@ class GaussianLoss(nn.Module):
             ft = y_pr
 
 
-        comp = 0
+        comp = 3
 
         if comp == 1:
             n, c, h, w = y_pr.size()
@@ -76,7 +76,7 @@ class GaussianLoss(nn.Module):
 
             return loss
 
-        else:
+        elif comp == 2:
             y_gt = y_gt.long()
             y_gt = y_gt.flatten()
             y_gt_mask = (y_gt >= 0) & (y_gt < self.num_classes)
@@ -89,19 +89,49 @@ class GaussianLoss(nn.Module):
 
             n, c, h, w = ft.size()
             ft = ft.transpose(1, 2)
-            ft = ft.transpose(2, 3)
-            ft = ft.reshape(n * w * h, c)
+            ft = ft.transpose(2, 3).reshape(n * w * h, c)
             ft = ft[y_gt_mask, :]
 
+            ft = ft.unsqueeze(dim=2)
+            ft = ft.repeat(1, 1, self.num_classes)
 
+            mean = torch.transpose(self.mean, 0, 1)
+            mean = mean.unsqueeze(dim=0)
 
-            loss = (ft - self.mean) ** 2
+            loss = (ft - mean) ** 2
+
+            var = torch.transpose(self.var, 0, 1)
+            var = var.unsqueeze(dim=0)
+
+            loss /= (2 * var)
             loss = torch.sum(loss, dim=1)
-            loss = loss/(2 * self.var)
 
             loss = loss * one_hot
 
             loss = torch.sum(loss)
+            return loss
+
+        else:
+            ft = torch.flatten(ft, start_dim=2)
+            ft = ft.transpose(0, 1)
+            ft = torch.flatten(ft, start_dim=1)
+            ft = ft.transpose(0, 1)
+
+            y_gt = torch.flatten(y_gt).long()
+
+            loss = 0
+
+            for cl in range(self.num_classes):
+                current_class = (y_gt == cl)
+                ft_cl = ft[current_class, :]
+                mean_cl = self.mean[cl, :]
+                var_cl = self.var[cl, :]
+                loss_cl = (ft_cl - mean_cl) ** 2
+                loss_cl = loss_cl/(2 * var_cl)
+                loss_cl = torch.sum(loss_cl, dim=1)
+                loss_cl = torch.mean(loss_cl)
+                loss = loss + loss_cl
+
             return loss
 
 class CrossEntropyLoss(nn.Module):

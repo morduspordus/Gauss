@@ -101,5 +101,33 @@ class MobileNetV2_Ft_Linear(MobileNetV2_Ft):
       return out, ft
 
 
+class MobileNetV2_Ft_LinearFixed(MobileNetV2_Ft):
+
+    def __init__(self, args):
+        super(MobileNetV2_Ft_LinearFixed, self).__init__(args)
+
+        self.ft_matrix = args['ft_matrix']
+        self.ft_matrix = torch.transpose(self.ft_matrix, 0, 1)
+        self.device = args['device']
+
+    def forward(self, im):
+
+      ft_ = super(MobileNetV2_Ft_LinearFixed, self).forward(im)
+
+      [n, d, h, w] = list(ft_.size())
+      ft = torch.cat([ft_, torch.ones(n, 1, h, w).to(self.device)], 1)
+
+      ft = torch.transpose(ft, 0, 1)
+      ft = torch.flatten(ft, start_dim=1)
+      ft = torch.transpose(ft, 0, 1)
+
+      res = torch.matmul(ft, self.ft_matrix)
+      res = res.view(n, h, w, self.num_classes)
+      res = torch.transpose(res, 1, 3)
+      res = torch.transpose(res, 2, 3)
+
+      return res, ft_
+
+
 
 

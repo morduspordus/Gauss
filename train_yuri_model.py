@@ -115,10 +115,7 @@ def my_own_test(ft_matrix, args, evaluatorIn, model_load):
     print(results)
 
 
-def compute_means_and_test(model_name, dataset_name, im_size):
-
-    # model_load = './run/experiments/models/OxfordPet_MobileNetV2_Ft_Linear_128__with_CE__V1.pt'
-    model_load = None
+def compute_means_and_test(model_name, dataset_name, im_size, model_load):
 
     args = get_standard_arguments(model_name, dataset_name, im_size)
 
@@ -127,6 +124,9 @@ def compute_means_and_test(model_name, dataset_name, im_size):
     args['num_classes'] = 3
     args['cats_dogs_separate'] = True
 
+    args['train_batch_size'] = 8
+    args['val_batch_size'] = 8
+
     evaluator = EvaluatorComputeMean
 
     _, args['loss_names'] = cross_entropy_loss(ignore_class=255)
@@ -134,6 +134,8 @@ def compute_means_and_test(model_name, dataset_name, im_size):
     test_logs = T.test(args, model_load, EvaluatorIn=evaluator)
 
     ft_matrix = test_logs['metrics']['feature_matrix']
+    print(ft_matrix)
+    print(ft_matrix[:, 1539])
 
     images_dir = './run/Temp/images'
     #imgSaver = ImageSaver(args, images_dir, out_multiplier=1, decode_segmap=decode_segmap_pascal,
@@ -163,11 +165,11 @@ def compute_means_and_test(model_name, dataset_name, im_size):
 
     diag = torch.unsqueeze(diag, dim=1)
     ft_matrix = torch.cat((ft_matrix, diag), dim=1)
-    #test_logs = test_with_matrix(args, model_load, imageSaver=imgSaver, ft_matrix=ft_matrix)
-    my_own_test(ft_matrix, args, evaluatorIn=Evaluator, model_load=model_load)
+    test_logs = test_with_matrix(args, model_load, imageSaver=imgSaver, ft_matrix=ft_matrix)
+    #my_own_test(ft_matrix, args, evaluatorIn=Evaluator, model_load=model_load)
 
 
-def compute_means_and_var(args, model_load=None, with_class_prob=False):
+def compute_means_and_var_and_ft_matrix(args, model_load=None, with_class_prob=False):
 
     evaluator = EvaluatorComputeMean
 
@@ -178,8 +180,9 @@ def compute_means_and_var(args, model_load=None, with_class_prob=False):
     epsilon = 0.000001
     mean = test_logs['metrics']['mean']
     var = test_logs['metrics']['variance'] + epsilon
+    ft_matrix = test_logs['metrics']['feature_matrix']
 
-    return mean, var
+    return mean, var, ft_matrix
 
 def one_stage_training_gauss(args):
 
@@ -197,32 +200,40 @@ def one_stage_training_gauss(args):
 
     _, args['loss_names'] = gaussian_loss(args)
 
-    if model_load is not None:
-        print("Testing input model")
-        test_logs = T.test(args, model_load)
+    #if model_load is not None:
+    print("Testing input model")
+    test_logs = T.test(args, model_load)
 
     valid_logs, train_logs, valid_metric = T.train_normal(args, num_epoch, model_save, model_load)
 
 
 if __name__ == "__main__":
-    # model_load = None
-    # model_name = model_names[0]
-    # dataset_name = singleclass_dataset_names[0]
-    # im_size = 128
-    #
-    # args = get_standard_arguments(model_name, dataset_name, im_size)
-    #
-    # args['num_features'] = 1539
-    # args['model_load'] = model_load
-    # # args['num_classes'] = 3
-    # # args['cats_dogs_separate'] = True
-    #
-    # mean, var = compute_means_and_var(args)
-    # args['mean'] = mean
-    # args['var'] = var
-    # one_stage_training_gauss(args)
+    model_load = None
+    model_name = model_names[0]
+    dataset_name = singleclass_dataset_names[0]
+    im_size = 128
 
-    compute_means_and_test(model_name=model_names[1], dataset_name=singleclass_dataset_names[0], im_size=128)
+    args = get_standard_arguments(model_name, dataset_name, im_size)
+
+    args['num_features'] = 1539
+    args['model_load'] = model_load
+    # args['num_classes'] = 3
+    # args['cats_dogs_separate'] = True
+
+    mean, var, ft_matrix = compute_means_and_var_and_ft_matrix(args)
+    args['mean'] = mean
+    args['var'] = var
+    args['ft_matrix'] = ft_matrix
+    args['model_name'] = model_names[2]
+    args['train_batch_size'] = 8
+    args['val_batch_size'] = 8
+    one_stage_training_gauss(args)
+
+    # model_load = './run/experiments/models/OxfordPet_MobileNetV2_Ft_Linear_128__with_CE__V2.pt'
+    # compute_means_and_test(model_name=model_names[1], dataset_name=singleclass_dataset_names[0], im_size=128, model_load=model_load)
+    #
+    # model_load = None
+    # compute_means_and_test(model_name=model_names[1], dataset_name=singleclass_dataset_names[0], im_size=128, model_load=model_load)
 
 
 

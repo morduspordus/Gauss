@@ -60,6 +60,7 @@ class EvaluatorComputeMean(Evaluator):
 
         [n, d, h, w] = list(ft.size())
         ft = torch.cat([ft, torch.ones(n, 1, h, w).to(self.device)], 1)
+        ft_sq = ft ** 2
 
         gt = gt.long()
 
@@ -67,6 +68,11 @@ class EvaluatorComputeMean(Evaluator):
         ft = ft.transpose(0, 1)
         ft = torch.flatten(ft, start_dim=1)
         ft = ft.transpose(0, 1)
+
+        ft_sq = torch.flatten(ft_sq, start_dim=2)
+        ft_sq = ft_sq.transpose(0, 1)
+        ft_sq = torch.flatten(ft_sq, start_dim=1)
+        ft_sq = ft_sq.transpose(0, 1)
 
         [n, h, w] = list(gt.size())
         gt = torch.flatten(gt)
@@ -77,21 +83,19 @@ class EvaluatorComputeMean(Evaluator):
             needed_features = torch.sum(needed_features, dim=0)
             needed_features = torch.unsqueeze(needed_features, 0)
 
+            needed_features_sq = ft_sq[current_class, :]
+            needed_features_sq = torch.sum(needed_features_sq, dim=0)
+            needed_features_sq = torch.unsqueeze(needed_features_sq, 0)
+
+
             if cl == 0:
                 all_features = needed_features
+                all_features_sq = needed_features_sq
             else:
                 all_features = torch.cat((all_features, needed_features), dim=0)
+                all_features_sq = torch.cat((all_features_sq, needed_features_sq), dim=0)
 
-        return all_features
-
-    def add_batch(self, gt, ft):
-        ft_, ft_sq_ = self._generate_matrix(gt, ft)
-        self.feature_matrix += ft_
-        self.feature_matrix_sq += ft_sq_
-
-    def reset(self):
-        self.feature_matrix = torch.zeros((self.num_classes, self.num_features + 1)).to(self.device)
-        self.feature_matrix_sq = torch.zeros((self.num_classes, self.num_features + 1)).to(self.device)
+        return all_features, all_features_sq
 
 
     def mean(self):
@@ -124,3 +128,13 @@ class EvaluatorComputeMean(Evaluator):
         all_metrics['feature_matrix_sq'] = self.feature_matrix_sq
 
         return all_metrics
+
+    def add_batch(self, gt, ft):
+        ft_, ft_sq_ = self._generate_matrix(gt, ft)
+        self.feature_matrix += ft_
+        self.feature_matrix_sq += ft_sq_
+
+    def reset(self):
+        self.feature_matrix = torch.zeros((self.num_classes, self.num_features + 1)).to(self.device)
+        self.feature_matrix_sq = torch.zeros((self.num_classes, self.num_features + 1)).to(self.device)
+
