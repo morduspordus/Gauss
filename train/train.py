@@ -116,9 +116,20 @@ class TrainEpoch(Epoch):
         for (k, v) in losses.items():
             loss = loss + v
 
+        # a = list(self.parameters())[0].clone()
+        # loss.backward()
+        # self.optimizer.step()
+        # b = list(self.parameters())[0].clone()
+        # torch.equal(a.data, b.data)
+
+        a = list(self.model.parameters())[0].clone()
+
         loss.backward()
 
         self.optimizer.step()
+
+        b = list(self.model.parameters())[0].clone()
+        d = torch.equal(a.data, b.data)
 
         self.evaluator.add_batch(y, prediction)
 
