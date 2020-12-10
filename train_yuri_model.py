@@ -242,7 +242,7 @@ def train_gauss():
     model_load = None
     model_name = model_names[2]
     dataset_name = singleclass_dataset_names[0]
-    im_size = 128
+    im_size = 64
 
     args = get_standard_arguments(model_name, dataset_name, im_size)
 
