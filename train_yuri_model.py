@@ -228,7 +228,7 @@ if __name__ == "__main__":
     model_load = None
     model_name = model_names[0]
     dataset_name = singleclass_dataset_names[0]
-    im_size = 128
+    im_size = 64
 
     args = get_standard_arguments(model_name, dataset_name, im_size)
 
