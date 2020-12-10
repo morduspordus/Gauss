@@ -172,7 +172,9 @@ def compute_means_and_var(args, model_load=None):
 
     evaluator = EvaluatorComputeMean
 
-    _, args['loss_names'] = cross_entropy_loss(ignore_class=255)
+    #_, args['loss_names'] = cross_entropy_loss(ignore_class=255)
+    _, args['loss_names'] = gaussian_loss(args)
+
     args['split'] = 'train'
 
     test_logs = T.test(args, model_load, EvaluatorIn=evaluator)
@@ -198,23 +200,42 @@ def one_stage_training_gauss(args, model_load):
 
     args['print_mean'] = False
 
-
     args['use_fixed_features'] = False
+    args['mean_requires_grad'] = True
+
     args['learning_rate'] = 0.0001
 
+    args['mean'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
+    args['var'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
+    _, args['loss_names'] = gaussian_loss(args)
+
     for iter in range(num_iter):
-        _, args['loss_names'] = gaussian_loss(args)
+        print("Testing before changing mean")
+        test_logs = T.test(args, model_load)
 
-        print("Testing input model")
-        test_logs = T.test(args, args['model_load'])
-
-        valid_logs, train_logs, valid_metric = T.train_normal(args, num_epoch, model_save, model_load)
-        model_load = model_save
         mean, var = compute_means_and_var(args, model_load)
         args['mean'] = mean
         args['var'] = var
         print('mean', mean)
         print('var', var)
+
+        _, args['loss_names'] = gaussian_loss(args)
+
+        print("Test after changing mean")
+        test_logs = T.test(args, model_load)
+
+        valid_logs, train_logs, valid_metric = T.train_normal(args, num_epoch, model_save, model_load)
+        model_load = model_save
+
+        m1 = mean[0, :]
+        m2 = mean[1, :]
+        m3 = mean[2, :]
+
+        d12 = torch.sqrt(torch.sum((m1 - m2) ** 2))
+        d13 = torch.sqrt(torch.sum((m1 - m3) ** 2))
+        d23 = torch.sqrt(torch.sum((m3 - m2) ** 2))
+
+        print("\nALl the ds: d23, d12, d13 ", d23, d12, d13)
 
 
 def train_gauss():
@@ -229,23 +250,8 @@ def train_gauss():
     args['model_load'] = model_load
     args['num_classes'] = 3
     args['cats_dogs_separate'] = True
-    args['mean_requires_grad'] = False
 
-    args['mean'] = torch.zeros(args['num_classes'], args['num_features'])  # value is not important, will not use it anyway
-    args['var'] = torch.ones(args['num_classes'], args['num_features'])  # value is not important, will not use it anyway
 
-    mean, var = compute_means_and_var(args)
-    args['mean'] = mean
-
-    # m1 = mean[0, :]
-    # m2 = mean[1, :]
-    # m3 = mean[2, :]
-    #
-    # d12 = torch.sqrt(torch.sum((m1 - m2) ** 2))
-    # d13 = torch.sqrt(torch.sum((m1 - m3) ** 2))
-    # d23 = torch.sqrt(torch.sum((m3 - m2) ** 2))
-
-    args['var'] = var
     args['train_batch_size'] = 8
     args['val_batch_size'] = 8
 

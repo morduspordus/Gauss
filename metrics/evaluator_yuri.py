@@ -9,8 +9,8 @@ class EvaluatorComputeMean(Evaluator):
         self.num_features = args['num_features']
 
         # sum of features matrix contains one extra dimension '1', useful for counting number of samples
-        self.feature_sum = torch.zeros((self.num_classes, self.num_features + 1)).to(self.device)
-        self.feature_sum_sq = torch.zeros((self.num_classes, self.num_features + 1)).to(self.device)
+        self.feature_sum = torch.zeros((self.num_classes, self.num_features + 1), dtype=torch.float64).to(self.device)
+        self.feature_sum_sq = torch.zeros((self.num_classes, self.num_features + 1), dtype=torch.float64).to(self.device)
 
         self.ignore_class = args['ignore_class']
         self.num_classes = args['num_classes']

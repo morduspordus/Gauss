@@ -42,9 +42,9 @@ class GaussianLoss(nn.Module):
                 loss_cl = torch.mean(loss_cl)
             loss = loss + loss_cl
 
-        # loss = loss - (1/3) *  (torch.mean( (self.mean[0,:] - self.mean[1,:]) **2)  - \
-        #               torch.mean( (self.mean[0,:] - self.mean[2,:]) **2) - \
-        #               torch.mean((self.mean[2, :] - self.mean[1, :]) ** 2))
+        loss = loss - (1/3) * (torch.mean( (mean[0,:] - mean[1,:]) **2)  + \
+                      torch.mean( (mean[0,:] - mean[2,:]) **2) + \
+                      torch.mean((mean[2, :] - mean[1, :]) ** 2))
 
         return loss
 
