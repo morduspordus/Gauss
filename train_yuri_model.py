@@ -132,7 +132,7 @@ def compute_means_and_test(model_name, dataset_name, im_size, model_load):
     args['split'] = 'train'
     test_logs = T.test(args, model_load, EvaluatorIn=evaluator)
 
-    ft_matrix = test_logs['metrics']['feature_matrix']
+    ft_matrix = test_logs['metrics']['feature_sum']
     print(ft_matrix)
     print(ft_matrix[:, 1539])
 
@@ -168,65 +168,58 @@ def compute_means_and_test(model_name, dataset_name, im_size, model_load):
     #my_own_test(ft_matrix, args, evaluatorIn=Evaluator, model_load=model_load)
 
 
-def compute_means_and_var_and_ft_matrix(args, model_load=None, with_class_prob=False):
+def compute_means_and_var(args, model_load=None):
 
     evaluator = EvaluatorComputeMean
 
     _, args['loss_names'] = cross_entropy_loss(ignore_class=255)
     args['split'] = 'train'
+
     test_logs = T.test(args, model_load, EvaluatorIn=evaluator)
 
-    epsilon = 0.000001
     mean = test_logs['metrics']['mean']
-    var = test_logs['metrics']['variance'] + epsilon
-    ft_matrix = test_logs['metrics']['feature_matrix']
+    var = test_logs['metrics']['variance']
 
-    class_sizes = ft_matrix[:, args['num_features']]
-    sum = torch.sum(class_sizes)
-    class_pr = class_sizes / sum
+    return mean, var
 
-    ft_matrix = mean / var
-    mean_by_var = -mean / (2 * var)
-    mean_t = torch.transpose(mean, 0, 1)
-    bias = torch.matmul(mean_by_var, mean_t)
-    diag = torch.diagonal(bias)
 
-    if with_class_prob:
-        nll = -torch.log(class_pr)
-        diag = diag + nll
-
-    diag = torch.unsqueeze(diag, dim=1)
-    ft_matrix = torch.cat((ft_matrix, diag), dim=1)
-
-    return mean, var, ft_matrix
-
-def one_stage_training_gauss(args):
+def one_stage_training_gauss(args, model_load):
 
     training_type = '_gauss_'
 
     output_dir = './run/experiments/models'
 
-    add_to_file_path, model_save = create_file_name(dataset_name, model_name, im_size, training_type, output_dir)
+    add_to_file_path, model_save = create_file_name(args['dataset_name'], args['model_name'], args['im_size'], training_type, output_dir)
 
-    num_epoch = 100
+    num_iter = 100
+    num_epoch = 1
 
     args['num_epoch'] = num_epoch
-    args['train_batch_size'] = 8
 
-    _, args['loss_names'] = gaussian_loss(args)
+    args['print_mean'] = False
 
-
-    print("Testing input model")
-    test_logs = T.test(args, model_load)
 
     args['use_fixed_features'] = False
+    args['learning_rate'] = 0.0001
 
-    valid_logs, train_logs, valid_metric = T.train_normal(args, num_epoch, model_save, model_load)
+    for iter in range(num_iter):
+        _, args['loss_names'] = gaussian_loss(args)
+
+        print("Testing input model")
+        test_logs = T.test(args, args['model_load'])
+
+        valid_logs, train_logs, valid_metric = T.train_normal(args, num_epoch, model_save, model_load)
+        model_load = model_save
+        mean, var = compute_means_and_var(args, model_load)
+        args['mean'] = mean
+        args['var'] = var
+        print('mean', mean)
+        print('var', var)
 
 
-if __name__ == "__main__":
+def train_gauss():
     model_load = None
-    model_name = model_names[0]
+    model_name = model_names[2]
     dataset_name = singleclass_dataset_names[0]
     im_size = 64
 
@@ -236,16 +229,32 @@ if __name__ == "__main__":
     args['model_load'] = model_load
     args['num_classes'] = 3
     args['cats_dogs_separate'] = True
+    args['mean_requires_grad'] = False
 
-    mean, var, ft_matrix = compute_means_and_var_and_ft_matrix(args)
+    args['mean'] = torch.zeros(args['num_classes'], args['num_features'])  # value is not important, will not use it anyway
+    args['var'] = torch.ones(args['num_classes'], args['num_features'])  # value is not important, will not use it anyway
+
+    mean, var = compute_means_and_var(args)
     args['mean'] = mean
+
+    # m1 = mean[0, :]
+    # m2 = mean[1, :]
+    # m3 = mean[2, :]
+    #
+    # d12 = torch.sqrt(torch.sum((m1 - m2) ** 2))
+    # d13 = torch.sqrt(torch.sum((m1 - m3) ** 2))
+    # d23 = torch.sqrt(torch.sum((m3 - m2) ** 2))
+
     args['var'] = var
-    args['ft_matrix'] = ft_matrix
-    #print(ft_matrix)
-    args['model_name'] = model_names[2]
     args['train_batch_size'] = 8
     args['val_batch_size'] = 8
-    one_stage_training_gauss(args)
+
+    one_stage_training_gauss(args, model_load)
+
+
+if __name__ == "__main__":
+
+    train_gauss()
 
     # model_load = './run/experiments/models/OxfordPet_MobileNetV2_Ft_Linear_128__with_CE__V2.pt'
     # compute_means_and_test(model_name=model_names[1], dataset_name=singleclass_dataset_names[0], im_size=128, model_load=model_load)

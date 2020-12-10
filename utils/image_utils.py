@@ -91,7 +91,9 @@ def process_visualize_image(dataset, device, model):
     object_channel = pr[0, 1, :, :]
     object_channel = object_channel.detach()
 
-    return image_original, pr_mask, gt_mask, object_channel
+    object_channel_2 = pr[0, 2, :, :].detach()
+
+    return image_original, pr_mask, gt_mask, object_channel, object_channel_2
 
 
 def visualize_results(train_dataset, valid_dataset, model, device):
@@ -100,7 +102,7 @@ def visualize_results(train_dataset, valid_dataset, model, device):
     if valid_dataset is None:
         valid_dataset = train_dataset
 
-    image_original, pr_mask, gt_mask, pr = process_visualize_image(train_dataset, device, model)
+    image_original, pr_mask, gt_mask, pr, pr2 = process_visualize_image(train_dataset, device, model)
 
     gt_out = np.array(gt_mask).astype(np.uint8)
 
@@ -110,7 +112,7 @@ def visualize_results(train_dataset, valid_dataset, model, device):
     #V,H = compute_edge_mask(torch.unsqueeze(image_original,0), sigma=0.1)
 
     if valid_dataset is not None:
-        image_original_val, pr_mask_val, gt_mask_val, pr = process_visualize_image(valid_dataset, device, model)
+        image_original_val, pr_mask_val, gt_mask_val, pr, pr2 = process_visualize_image(valid_dataset, device, model)
         gt_val_out = np.array(gt_mask_val).astype(np.uint8)
         segmap_gt_val = decode_segmap(gt_val_out, dataset=dataset_name)
 
@@ -121,71 +123,8 @@ def visualize_results(train_dataset, valid_dataset, model, device):
             image_valid=image_original_val,
             gt_val=segmap_gt_val,
             predict_valid = decode_segmap(pr_mask_val.cpu().numpy(), dataset_name),
-            pr=pr.cpu().numpy()
+            pr=pr.cpu().numpy(),
+            pr2=pr2.cpu().numpy()
      #       edgeV=V.squeeze().cpu().numpy(),
       #      edgeH=H.squeeze().cpu().numpy()
         )
-
-def visualize_results_ft(args, model_load, device, ft_matrix):
-
-    model = get_model(args)
-    model.load_state_dict(torch.load(model_load))
-    model = model.to(device)
-    model.eval()
-
-    train_dataset = get_val_dataset(args, args['split'])
-
-    valid_dataset = train_dataset
-
-    image_original, pr_mask, gt_mask, pr = process_visualize_image_ft(train_dataset, device, model, ft_matrix)
-
-    gt_out = np.array(gt_mask).astype(np.uint8)
-
-    dataset_name = train_dataset.name()
-    segmap_gt = decode_segmap(gt_out, dataset=dataset_name)
-
-    if valid_dataset is not None:
-        image_original_val, pr_mask_val, gt_mask_val, pr = process_visualize_image_ft(valid_dataset, device, model, ft_matrix)
-        gt_val_out = np.array(gt_mask_val).astype(np.uint8)
-        segmap_gt_val = decode_segmap(gt_val_out, dataset=dataset_name)
-
-        visualize_images(
-            image_train = image_original,
-            gt_train=segmap_gt,
-            predict_train=decode_segmap(pr_mask.cpu().numpy(), dataset_name),
-            image_valid=image_original_val,
-            gt_val=segmap_gt_val,
-            predict_valid = decode_segmap(pr_mask_val.cpu().numpy(), dataset_name),
-            pr=pr.cpu().numpy()
-        )
-
-
-def process_visualize_image_ft(dataset, device, model, ft_matrix):
-
-
-    n = np.random.choice(len(dataset))
-
-    sample = dataset[n]
-    image = sample['image']
-    gt_mask = sample['label']
-
-    x_tensor = image.to(device).unsqueeze(0)
-
-    pr = model(x_tensor)
-
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    ft_matrix = torch.tensor(ft_matrix).to(device)
-
-    pr = torch.einsum('abcd, fb->afcd', [pr, ft_matrix])
-
-    _, pr_mask = torch.max(pr, dim=1)
-    pr = pr.long()
-
-    pr_mask = pr_mask.squeeze()
-
-    image_original = img_denormalize(image.cpu().numpy(), dataset.mean, dataset.std)
-    object_channel = pr[0, 1, :, :]
-    object_channel = object_channel.detach()
-
-    return image_original, pr_mask, gt_mask, object_channel
-

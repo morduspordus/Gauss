@@ -9,7 +9,7 @@ from models.Unet.unet_various import MobileNetV2_Layers
 
 
 class MobileNetV2_Ft_Linear(nn.Module):
-    "returns intermidiate and final layers as features. Concatenates features at the same spatial resolution"
+    "returns intermediate and final layers as features. Concatenates features at the same spatial resolution"
 
     def __init__(self):
         super(MobileNetV2_Layers, self).__init__()
@@ -101,54 +101,102 @@ class MobileNetV2_Ft_Linear(MobileNetV2_Ft):
       return out, ft
 
 
+# class MobileNetV2_Ft_LinearFixed(MobileNetV2_Ft):
+#
+#     def __init__(self, args):
+#         super(MobileNetV2_Ft_LinearFixed, self).__init__(args)
+#
+#         self.W_aug_matrix = args['W_aug_matrix']
+#         self.W_aug_matrix = torch.transpose(self.W_aug_matrix, 0, 1)
+#
+#         self.device = args['device']
+#
+#     def forward(self, im):
+#
+#       ft_ = super(MobileNetV2_Ft_LinearFixed, self).forward(im)
+#
+#       [n, d, h, w] = list(ft_.size())
+#       ft = torch.cat([ft_, torch.ones(n, 1, h, w).to(self.device)], 1)
+#
+#       ft = torch.transpose(ft, 0, 1)
+#       ft = torch.flatten(ft, start_dim=1)
+#       ft = torch.transpose(ft, 0, 1)
+#
+#       res = torch.matmul(ft, self.W_aug_matrix)
+#       res = res.view(n, h, w, self.num_classes)
+#       res = torch.transpose(res, 1, 3)
+#       res = torch.transpose(res, 2, 3)
+#
+#       return res, ft_
+#
+
 class MobileNetV2_Ft_LinearFixed(MobileNetV2_Ft):
 
     def __init__(self, args):
         super(MobileNetV2_Ft_LinearFixed, self).__init__(args)
 
-        self.ft_matrix = args['ft_matrix']
-        self.ft_matrix = torch.transpose(self.ft_matrix, 0, 1)
         self.device = args['device']
+        requires_grad = args['mean_requires_grad']
+
+        self.mean = torch.nn.Parameter(args['mean'], requires_grad=requires_grad)
+        self.var = torch.nn.Parameter(args['var'], requires_grad=requires_grad)
 
     def forward(self, im):
+        W_aug_matrix = self.mean / self.var
+        mean_by_var = -self.mean / (2 * self.var)
+        mean_t = torch.transpose(self.mean, 0, 1)
+        bias = torch.matmul(mean_by_var, mean_t)
+        diag = torch.diagonal(bias)
 
-      ft_ = super(MobileNetV2_Ft_LinearFixed, self).forward(im)
+        # if self.print_mean:
+        #     print("mean", self.mean[0,1], self.mean[0,10], self.mean[1,1000], self.mean[2,200])
+        #     print("var", self.var[0,1], self.var[0,10], self.var[1,1000], self.var[2,200])
 
-      [n, d, h, w] = list(ft_.size())
-      ft = torch.cat([ft_, torch.ones(n, 1, h, w).to(self.device)], 1)
+        # if self.class_pr is not None:
+        #     nll = -torch.log(self.class_pr)
+        #     diag = diag + nll
 
-      ft = torch.transpose(ft, 0, 1)
-      ft = torch.flatten(ft, start_dim=1)
-      ft = torch.transpose(ft, 0, 1)
+        diag = torch.unsqueeze(diag, dim=1)
+        W_aug_matrix = torch.cat((W_aug_matrix, diag), dim=1)
+        W_aug_matrix = torch.transpose(W_aug_matrix, 0, 1)
 
-      res = torch.matmul(ft, self.ft_matrix)
-      res = res.view(n, h, w, self.num_classes)
-      res = torch.transpose(res, 1, 3)
-      res = torch.transpose(res, 2, 3)
+        ft = super(MobileNetV2_Ft_LinearFixed, self).forward(im)
 
-      return res, ft_
+        [n, d, h, w] = list(ft.size())
+        ft = torch.cat([ft, torch.ones(n, 1, h, w).to(self.device)], 1)
 
+        ft = torch.transpose(ft, 0, 1)
+        ft = torch.flatten(ft, start_dim=1)
+        ft = torch.transpose(ft, 0, 1)
 
+        res = torch.matmul(ft, W_aug_matrix)
+        res = res.view(n, h, w, self.num_classes)
+        res = torch.transpose(res, 1, 3)
+        res = torch.transpose(res, 2, 3)
 
+        return res, ft[:, 0:self.num_features], self.mean, self.var
+
+#
 #
 # class MobileNetV2_Ft_LinearFixed(MobileNetV2_Ft):
 #
 #     def __init__(self, args):
 #         super(MobileNetV2_Ft_LinearFixed, self).__init__(args)
 #
-#         self.ft_matrix = args['ft_matrix']
+#         self.W_aug_matrix = args['W_aug_matrix']
 #         self.device = args['device']
 #         self.num_features = args['num_features']
 #
 #         self.conv_layer = nn.Conv2d(self.num_features, self.num_classes, 1, 1, 0)
 #
-#         for param in self.conv_layer.parameters():
-#             param.requires_grad = False
+#         # for param in self.conv_layer.parameters():
+#         #     param.requires_grad = False
 #
-#         to_replace = self.ft_matrix[:, self.num_features:].flatten()
+#         to_replace = self.W_aug_matrix[:, self.num_features:].flatten()
 #         self.conv_layer.bias[:] = to_replace
 #
-#         to_replace = self.ft_matrix[:, 0:self.num_features]
+#
+#         to_replace = self.W_aug_matrix[:, 0:self.num_features]
 #         to_replace = to_replace.unsqueeze(dim=2)
 #         to_replace = to_replace.unsqueeze(dim=2)
 #
@@ -165,7 +213,7 @@ class MobileNetV2_Ft_LinearFixed(MobileNetV2_Ft):
 #       return out, ft
 #
 #
-
-
-
-
+#
+#
+#
+#
