@@ -201,13 +201,15 @@ def one_stage_training_gauss(args, model_load):
     args['print_mean'] = False
 
     args['use_fixed_features'] = False
-    args['mean_requires_grad'] = True
+    args['mean_requires_grad'] = False
 
-    args['learning_rate'] = 0.0001
+    args['learning_rate'] = 0.000001
 
     args['mean'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
     args['var'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
     _, args['loss_names'] = gaussian_loss(args)
+
+
 
     for iter in range(num_iter):
         print("Testing before changing mean")
@@ -216,8 +218,11 @@ def one_stage_training_gauss(args, model_load):
         mean, var = compute_means_and_var(args, model_load)
         args['mean'] = mean
         args['var'] = var
-        print('mean', mean)
-        print('var', var)
+
+        print('mean', mean, '\nnorm of mean ', torch.mean(mean, dim=1))
+        print('var', var, '\nnorm of var', torch.mean(var, dim=1))
+        print('var', var, '\nnorm of logvar', torch.mean(torch.log(var), dim=1))
+
 
         _, args['loss_names'] = gaussian_loss(args)
 
@@ -242,7 +247,7 @@ def train_gauss():
     model_load = None
     model_name = model_names[2]
     dataset_name = singleclass_dataset_names[0]
-    im_size = 64
+    im_size = 128
 
     args = get_standard_arguments(model_name, dataset_name, im_size)
 

@@ -5,8 +5,8 @@ from metrics.evaluator import Evaluator
 def get_standard_arguments(model_name, dataset_name, im_size):
 
     args = {}
-    args['data_dir'] = 'd:\\Olga'
-    # args['data_dir'] = 'c:\\users\\oveksler\\home'
+    # args['data_dir'] = 'd:\\Olga'
+    args['data_dir'] = 'c:\\users\\oveksler\\home'
     # args['data_dir'] = 'c:\\Home'
 
     args.update(get_dataset_args(args, dataset_name))   # gets argument related to datasets

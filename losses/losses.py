@@ -2,6 +2,23 @@ import torch
 import torch.nn as nn
 
 
+class MeansPushLoss(nn.Module):
+    __name__ = 'MeansPush'
+
+    def __init__(self, param):
+        super().__init__()
+
+    def forward(self, y_pr, y_gt, sample):
+
+        mean = y_pr[2]
+
+        loss = -1000 * (torch.mean( (mean[0,:] - mean[1,:]) **2)  + \
+                      torch.mean((mean[0,:] - mean[2,:]) **2) + \
+                      torch.mean((mean[2, :] - mean[1, :]) ** 2))
+
+        return loss
+
+
 class GaussianLoss(nn.Module):
     __name__ = 'GaussianLoss'
 
@@ -42,9 +59,6 @@ class GaussianLoss(nn.Module):
                 loss_cl = torch.mean(loss_cl)
             loss = loss + loss_cl
 
-        loss = loss - (1/3) * (torch.mean( (mean[0,:] - mean[1,:]) **2)  + \
-                      torch.mean( (mean[0,:] - mean[2,:]) **2) + \
-                      torch.mean((mean[2, :] - mean[1, :]) ** 2))
 
         return loss
 
