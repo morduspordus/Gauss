@@ -35,11 +35,6 @@ class GaussianLoss(nn.Module):
         var = y_pr[3]
         y_pr = y_pr[0]
 
-        # ft = torch.flatten(ft, start_dim=2)
-        # ft = ft.transpose(0, 1)
-        # ft = torch.flatten(ft, start_dim=1)
-        # ft = ft.transpose(0, 1)
-
         y_gt = torch.flatten(y_gt).long()
 
         loss = 0
@@ -56,7 +51,12 @@ class GaussianLoss(nn.Module):
                 loss_cl = (ft_cl - mean_cl) ** 2
                 loss_cl = loss_cl/(2 * var_cl)
                 loss_cl = torch.sum(loss_cl, dim=1)
-                loss_cl = torch.mean(loss_cl)
+
+                logvar = (1/2)*torch.log(var_cl)
+
+                logsigmas = torch.sum(logvar)
+
+                loss_cl = torch.mean(loss_cl) + logsigmas
             loss = loss + loss_cl
 
 

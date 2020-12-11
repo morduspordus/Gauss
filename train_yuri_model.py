@@ -203,7 +203,7 @@ def one_stage_training_gauss(args, model_load):
     args['use_fixed_features'] = False
     args['mean_requires_grad'] = False
 
-    args['learning_rate'] = 0.000001
+    args['learning_rate'] = 0.0001
 
     args['mean'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
     args['var'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
@@ -228,6 +228,11 @@ def one_stage_training_gauss(args, model_load):
 
         print("Test after changing mean")
         test_logs = T.test(args, model_load)
+
+        print("Test after changing mean on valid")
+        args['split'] = 'val'
+        test_logs = T.test(args, model_load)
+        args['split'] = 'train'
 
         valid_logs, train_logs, valid_metric = T.train_normal(args, num_epoch, model_save, model_load)
         model_load = model_save
@@ -257,7 +262,7 @@ def train_gauss():
     args['cats_dogs_separate'] = True
 
 
-    args['train_batch_size'] = 8
+    args['train_batch_size'] = 4
     args['val_batch_size'] = 8
 
     one_stage_training_gauss(args, model_load)

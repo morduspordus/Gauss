@@ -74,7 +74,7 @@ class OxfordPet(Dataset):
         self.orig_im_sizes = read_sizes(self.img_paths, self.img_names) # store original image heights and widths
 
         # Display stats
-        #print('Number of images in {}: {:d}'.format(split, len(self.img_paths)))
+        print('Number of images in {}: {:d}'.format(split, len(self.img_paths)))
 
 
     def __len__(self):
