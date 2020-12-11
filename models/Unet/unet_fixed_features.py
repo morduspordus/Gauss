@@ -152,7 +152,6 @@ class MobileNetV2_Ft_LinearFixed(MobileNetV2_Ft):
         ft = torch.flatten(ft, start_dim=1)
         ft = torch.transpose(ft, 0, 1)
 
-
         for cl in range(self.num_classes):
             mean_cl = self.mean[cl, :]
             var_cl = self.var[cl, :]
@@ -168,9 +167,9 @@ class MobileNetV2_Ft_LinearFixed(MobileNetV2_Ft):
             loss_cl = loss_cl + logsigmas
 
             if cl == 0:
-                res = loss_cl[:,None]
+                res = loss_cl[:, None]
             else:
-                res = torch.cat((res, loss_cl[:,None]), dim=1)
+                res = torch.cat((res, loss_cl[:, None]), dim=1)
 
         res = res.view(n, h, w, self.num_classes)
         res = torch.transpose(res, 1, 3)

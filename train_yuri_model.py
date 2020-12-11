@@ -194,21 +194,18 @@ def one_stage_training_gauss(args, model_load):
     add_to_file_path, model_save = create_file_name(args['dataset_name'], args['model_name'], args['im_size'], training_type, output_dir)
 
     num_iter = 100
-    num_epoch = 1
+    num_epoch = 5
 
     args['num_epoch'] = num_epoch
-
-    args['print_mean'] = False
 
     args['use_fixed_features'] = False
     args['mean_requires_grad'] = False
 
-    args['learning_rate'] = 0.0001
+    args['learning_rate'] = 0.00000001
 
     args['mean'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
     args['var'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
     _, args['loss_names'] = gaussian_loss(args)
-
 
 
     for iter in range(num_iter):

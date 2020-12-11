@@ -4,6 +4,13 @@ import sys
 import torch
 from tqdm import tqdm as tqdm
 from segmentation_models_pytorch.utils.meter import AverageValueMeter
+import torch.nn as nn
+
+
+def set_bn_eval(m):
+    classname = m.__class__.__name__
+    if classname.find('BatchNorm') != -1:
+      m.eval()
 
 
 class Epoch:
@@ -99,6 +106,7 @@ class TrainEpoch(Epoch):
 
     def on_epoch_start(self):
         self.model.train()
+        self.model.apply(set_bn_eval)
         self.evaluator.reset()
 
     def on_epoch_end(self):
@@ -151,8 +159,8 @@ class ValidEpoch(Epoch):
 
 
     def on_epoch_start(self):
-        self.model.eval()
-        self.evaluator.reset()
+       self.model.eval()
+       self.evaluator.reset()
 
     def batch_update(self, x, y, sample):
         with torch.no_grad():

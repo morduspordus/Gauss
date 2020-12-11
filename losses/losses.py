@@ -26,7 +26,7 @@ class GaussianLoss(nn.Module):
         super().__init__()
         self.device = param['device']
         self.num_classes = param['num_classes']
-
+        self.epsilon = 0.0000001
 
     def forward(self, y_pr, y_gt, sample):
 
@@ -46,7 +46,7 @@ class GaussianLoss(nn.Module):
                 loss_cl = 0
             else:
                 mean_cl = mean[cl, :]
-                var_cl = var[cl, :]
+                var_cl = var[cl, :] + self.epsilon
 
                 loss_cl = (ft_cl - mean_cl) ** 2
                 loss_cl = loss_cl/(2 * var_cl)
