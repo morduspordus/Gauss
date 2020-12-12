@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from models.Unet.unet_fixed_features import compute_log_lk
 
 
 class MeansPushLoss(nn.Module):
@@ -26,7 +27,6 @@ class GaussianLoss(nn.Module):
         super().__init__()
         self.device = param['device']
         self.num_classes = param['num_classes']
-        self.epsilon = 0.0000001
 
     def forward(self, y_pr, y_gt, sample):
 
@@ -39,6 +39,7 @@ class GaussianLoss(nn.Module):
 
         loss = 0
 
+        [n, c] = ft.size()
         for cl in range(self.num_classes):
             current_class = (y_gt == cl)
             ft_cl = ft[current_class, :]
@@ -46,21 +47,14 @@ class GaussianLoss(nn.Module):
                 loss_cl = 0
             else:
                 mean_cl = mean[cl, :]
-                var_cl = var[cl, :] + self.epsilon
+                var_cl = var[cl, :]
 
-                loss_cl = (ft_cl - mean_cl) ** 2
-                loss_cl = loss_cl/(2 * var_cl)
-                loss_cl = torch.sum(loss_cl, dim=1)
+                loss_cl = torch.sum(compute_log_lk(ft_cl, mean_cl, var_cl))
 
-                logvar = (1/2)*torch.log(var_cl)
-
-                logsigmas = torch.sum(logvar)
-
-                loss_cl = torch.mean(loss_cl) + logsigmas
             loss = loss + loss_cl
 
 
-        return loss
+        return loss/n
 
 
 class CrossEntropyLoss(nn.Module):

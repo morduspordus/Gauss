@@ -194,14 +194,14 @@ def one_stage_training_gauss(args, model_load):
     add_to_file_path, model_save = create_file_name(args['dataset_name'], args['model_name'], args['im_size'], training_type, output_dir)
 
     num_iter = 100
-    num_epoch = 5
+    num_epoch = 1
 
     args['num_epoch'] = num_epoch
 
     args['use_fixed_features'] = False
     args['mean_requires_grad'] = False
 
-    args['learning_rate'] = 0.00000001
+    args['learning_rate'] = 0.000001
 
     args['mean'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
     args['var'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
@@ -253,7 +253,7 @@ def train_gauss():
 
     args = get_standard_arguments(model_name, dataset_name, im_size)
 
-    args['num_features'] = 1539
+    args['num_features'] = 1536
     args['model_load'] = model_load
     args['num_classes'] = 3
     args['cats_dogs_separate'] = True
@@ -265,9 +265,55 @@ def train_gauss():
     one_stage_training_gauss(args, model_load)
 
 
+def temp_test():
+    from models.Unet.unet_fixed_features import compute_log_lk
+
+    r = range(24)
+
+    ft = torch.tensor(r).float()
+    ft = ft.view(6, 4).cuda()
+    num_classes = 3
+
+    print(ft)
+
+    gt = torch.tensor([0, 0, 1, 1, 2, 2]).cuda()
+
+    model_name = model_names[2]
+    dataset_name = singleclass_dataset_names[0]
+    im_size = 128
+    args = get_standard_arguments(model_name, dataset_name, im_size)
+    args['num_features'] = 4
+    args['num_classes'] = num_classes
+
+    evaluator = EvaluatorComputeMean(args)
+    evaluator.add_batch(gt, (ft, ft))
+    all_metrics = evaluator.compute_all_metrics()
+    mean = all_metrics['mean']
+    var = all_metrics['variance']
+
+    loss = 0
+
+    [n, c] = ft.size()
+    for cl in range(num_classes):
+        current_class = (gt == cl)
+        ft_cl = ft[current_class, :]
+        if ft_cl.size()[0] == 0:
+            loss_cl = 0
+        else:
+            mean_cl = mean[cl, :]
+            var_cl = var[cl, :]
+
+            loss_cl = torch.sum(compute_log_lk(ft_cl, mean_cl, var_cl))
+
+        loss = loss + loss_cl
+
+    loss = loss/n
+    print(loss)
+
 if __name__ == "__main__":
 
     train_gauss()
+    # temp_test()
 
     # model_load = './run/experiments/models/OxfordPet_MobileNetV2_Ft_Linear_128__with_CE__V2.pt'
     # compute_means_and_test(model_name=model_names[1], dataset_name=singleclass_dataset_names[0], im_size=128, model_load=model_load)
