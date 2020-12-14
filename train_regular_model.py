@@ -34,7 +34,7 @@ def one_stage_training(model_name, dataset_name, im_size, model_load):
 
 def one_stage_training_with_args(model_name, dataset_name, im_size, model_load, args):
 
-    training_type = '_with_CE_'
+    training_type = '_with_CE_change_feat_'
 
     output_dir = './run/experiments/models'
     if not os.path.exists(output_dir):
@@ -42,13 +42,20 @@ def one_stage_training_with_args(model_name, dataset_name, im_size, model_load, 
 
     add_to_file_path, model_save = create_file_name(dataset_name, model_name, im_size, training_type, output_dir)
 
-    num_epoch = 5
-    args['use_fixed_features'] = True
+    num_epoch = 20
+    args['use_fixed_features'] = False
     args['num_epoch'] = num_epoch
     args['model_load'] = model_load
     args['model_load'] = model_load
     args['num_classes'] = 3
     args['cats_dogs_separate'] = True
+    args['num_features'] = 1536
+    args['learning_rate'] = 0.0001
+    # args['mean_requires_grad'] = True
+    # args['mean'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
+    # args['var'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
+    # args['train_batch_size'] = 4
+    # args['val_batch_size'] = 8
 
     #args['use_fixed_features'] = False
     #args['train_batch_size'] = 8

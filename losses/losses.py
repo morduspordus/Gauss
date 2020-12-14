@@ -35,6 +35,7 @@ class GaussianLoss(nn.Module):
         var = y_pr[3]
         y_pr = y_pr[0]
 
+
         y_gt = torch.flatten(y_gt).long()
 
         loss = 0

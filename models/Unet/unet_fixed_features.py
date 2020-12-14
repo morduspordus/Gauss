@@ -10,7 +10,7 @@ from models.Unet.unet_various import MobileNetV2_Layers
 
 def compute_log_lk(ft, mean_cl, var_cl):
     epsilon = 0.0000001
-    var_cl += epsilon
+    var_cl = var_cl + epsilon
 
     loss_cl = (ft - mean_cl) ** 2
     loss_cl = loss_cl / (2 * var_cl)
@@ -118,35 +118,6 @@ class MobileNetV2_Ft_Linear(MobileNetV2_Ft):
       return out, ft
 
 
-# class MobileNetV2_Ft_LinearFixed(MobileNetV2_Ft):
-#
-#     def __init__(self, args):
-#         super(MobileNetV2_Ft_LinearFixed, self).__init__(args)
-#
-#         self.W_aug_matrix = args['W_aug_matrix']
-#         self.W_aug_matrix = torch.transpose(self.W_aug_matrix, 0, 1)
-#
-#         self.device = args['device']
-#
-#     def forward(self, im):
-#
-#       ft_ = super(MobileNetV2_Ft_LinearFixed, self).forward(im)
-#
-#       [n, d, h, w] = list(ft_.size())
-#       ft = torch.cat([ft_, torch.ones(n, 1, h, w).to(self.device)], 1)
-#
-#       ft = torch.transpose(ft, 0, 1)
-#       ft = torch.flatten(ft, start_dim=1)
-#       ft = torch.transpose(ft, 0, 1)
-#
-#       res = torch.matmul(ft, self.W_aug_matrix)
-#       res = res.view(n, h, w, self.num_classes)
-#       res = torch.transpose(res, 1, 3)
-#       res = torch.transpose(res, 2, 3)
-#
-#       return res, ft_
-#
-
 class MobileNetV2_Ft_LinearFixed(MobileNetV2_Ft):
 
     def __init__(self, args):
@@ -157,6 +128,9 @@ class MobileNetV2_Ft_LinearFixed(MobileNetV2_Ft):
 
         self.mean = torch.nn.Parameter(args['mean'], requires_grad=requires_grad)
         self.var = torch.nn.Parameter(args['var'], requires_grad=requires_grad)
+
+
+        print("\nStarted next model, mean:", torch.mean(self.mean, dim=1))
 
         self.num_classes, d = list(self.mean.size())
 

@@ -7,7 +7,7 @@ from utils.get_scheduler import get_scheduler
 from utils.file_utils import FileWrite
 from utils.get_dataset import *
 from utils.image_utils import visualize_results
-from utils.other_utils import  param_to_string, create_string_anneal
+from utils.other_utils import param_to_string, create_string_anneal
 import numpy as np
 from metrics.evaluator import Evaluator
 import copy
@@ -171,7 +171,7 @@ def train_normal(args, num_epoch, model_save=None, model_load=None, imgSaver=Non
     main_metric = evaluator.main_metric
 
     if model_load is not None:
-        model.load_state_dict(torch.load(model_load))
+        model.load_state_dict(torch.load(model_load), strict=False)
 
     train_dataset, valid_dataset = get_train_val_datasets(args)
 
@@ -239,7 +239,7 @@ def test(args, model_load, imageSaver=None, EvaluatorIn=None):
     model = get_model(args)
 
     if model_load is not None:
-        model.load_state_dict(torch.load(model_load))
+        model.load_state_dict(torch.load(model_load), strict=False)
 
     logs = test_with_loaded_model(args, model, imageSaver, EvaluatorIn)
 

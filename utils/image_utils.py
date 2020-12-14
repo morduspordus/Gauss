@@ -92,6 +92,7 @@ def process_visualize_image(dataset, device, model):
     object_channel = object_channel.detach()
 
     object_channel_2 = pr[0, 2, :, :].detach()
+    #object_channel_2 = pr[0, 0, :, :].detach()
 
     return image_original, pr_mask, gt_mask, object_channel, object_channel_2
 
