@@ -256,7 +256,7 @@ def test_with_loaded_model(args, model, imageSaver=None, EvaluatorIn=None):
         evaluator = EvaluatorIn(args)
 
     valid_dataset = get_val_dataset(args, args['split'])
-    valid_loader = torch.utils.data.DataLoader(valid_dataset, args['val_batch_size'], shuffle=False, num_workers=args['num_workers'])
+    valid_loader = torch.utils.data.DataLoader(valid_dataset, args['val_batch_size'], shuffle=args['shuffle_test'], num_workers=args['num_workers'])
 
     valid_epoch = create_valid_epoch_runner(model,
                                             evaluator,

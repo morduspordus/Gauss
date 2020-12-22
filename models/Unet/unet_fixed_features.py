@@ -8,15 +8,16 @@ import torch.nn.functional as F
 from models.Unet.unet_various import MobileNetV2_Layers
 
 
-def compute_log_lk(ft, mean_cl, var_cl):
-    epsilon = 0.0000001
+def compute_neg_log_lk(ft, mean_cl, var_cl):
+    two_times_pi = 6.28318530718
+    epsilon = torch.finfo(torch.float32).eps
     var_cl = var_cl + epsilon
 
     loss_cl = (ft - mean_cl) ** 2
     loss_cl = loss_cl / (2 * var_cl)
     loss_cl = torch.sum(loss_cl, dim=1)
 
-    logvar = (1/2) * torch.log(var_cl)
+    logvar = (1/2) * torch.log(var_cl * two_times_pi)
 
     logsigmas = torch.sum(logvar)
 
@@ -128,9 +129,10 @@ class MobileNetV2_Ft_LinearFixed(MobileNetV2_Ft):
 
         self.mean = torch.nn.Parameter(args['mean'], requires_grad=requires_grad)
         self.var = torch.nn.Parameter(args['var'], requires_grad=requires_grad)
+        self.class_prob = args['class_prob']
 
 
-        print("\nStarted next model, mean:", torch.mean(self.mean, dim=1))
+#        print("\nStarted next model, mean:", torch.mean(self.mean, dim=1))
 
         self.num_classes, d = list(self.mean.size())
 
@@ -148,7 +150,7 @@ class MobileNetV2_Ft_LinearFixed(MobileNetV2_Ft):
             mean_cl = self.mean[cl, :]
             var_cl = self.var[cl, :]
 
-            loss_cl = compute_log_lk(ft, mean_cl, var_cl)
+            loss_cl = compute_neg_log_lk(ft, mean_cl, var_cl)
 
             if cl == 0:
                 res = loss_cl[:, None]
@@ -159,5 +161,5 @@ class MobileNetV2_Ft_LinearFixed(MobileNetV2_Ft):
         res = torch.transpose(res, 1, 3)
         res = torch.transpose(res, 2, 3)
 
-        return -res, ft, self.mean, self.var
+        return -res, ft, self.mean, self.var, self.class_prob
 

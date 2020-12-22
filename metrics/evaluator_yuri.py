@@ -15,6 +15,7 @@ class EvaluatorComputeMean(Evaluator):
         self.ignore_class = args['ignore_class']
         self.num_classes = args['num_classes']
         self.device = args['device']
+
         assert (self.ignore_class >= self.num_classes or self.ignore_class == -1)
 
     def _generate_matrix(self, gt, input):
@@ -98,19 +99,31 @@ class EvaluatorComputeMean(Evaluator):
     def mean(self):
         divide_by = self.feature_sum[:, self.num_features]
         divide_by = torch.unsqueeze(divide_by, dim=1)
-        mean_vector = self.feature_sum[:, 0:self.num_features]/divide_by
+        mean_vector = self.feature_sum[:, 0:self.num_features]
+        mean_vector = mean_vector/divide_by
         return mean_vector
 
+
     def variance(self):
-        epsilon = 0.0000001
+
         mean_vector = self.mean()
-        mean_vector = mean_vector[:, 0:self.num_features]
+
         divide_by = self.feature_sum_sq[:, self.num_features]
         divide_by = torch.unsqueeze(divide_by, dim=1)
         var_vector = self.feature_sum_sq[:, 0:self.num_features] / divide_by
+
         var_vector = var_vector - mean_vector ** 2
-        var_vector = var_vector + epsilon
+
+        mean_of_var = torch.mean(var_vector, dim=0)
+        var_vector = mean_of_var.repeat(3, 1)
         return var_vector
+
+    def class_prob(self):
+        divide_by = self.feature_sum[:, self.num_features]
+        total = torch.sum(divide_by)
+
+        return divide_by/total
+
 
     def ft_matrix(self):
         matrix = self.feature_sum
@@ -125,6 +138,7 @@ class EvaluatorComputeMean(Evaluator):
         all_metrics['mean'] = self.mean()
         all_metrics['variance'] = self.variance()
         all_metrics['feature_sum_sq'] = self.feature_sum_sq
+        all_metrics['class_prob'] = self.class_prob()
 
         return all_metrics
 
@@ -136,4 +150,5 @@ class EvaluatorComputeMean(Evaluator):
     def reset(self):
         self.feature_sum = torch.zeros((self.num_classes, self.num_features + 1)).to(self.device)
         self.feature_sum_sq = torch.zeros((self.num_classes, self.num_features + 1)).to(self.device)
+
 

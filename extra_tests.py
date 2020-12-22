@@ -219,3 +219,115 @@ def temp_test():
     # all_metrics = evaluator.compute_all_metrics()
     # print(all_metrics)
 
+
+def visualize_pca():
+    model_load = './run/experiments/models/OxfordPet_MobileNetV2_Ft_LinearFixed_128__gauss__V30.pt'
+    model_name = model_names[2]
+    dataset_name = singleclass_dataset_names[0]
+    im_size = 128
+
+    args = get_standard_arguments(model_name, dataset_name, im_size)
+
+    args['num_features'] = 1536
+    args['model_load'] = model_load
+    args['num_classes'] = 3
+    args['cats_dogs_separate'] = True
+
+    args['train_batch_size'] = 4
+    args['val_batch_size'] = 8
+    args['mean_requires_grad'] = False
+    args['mean'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
+    args['var'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
+
+
+
+    evaluator = EvaluatorComputeMeanSomeFeatures
+
+    _, args['loss_names'] = gaussian_loss(args)
+
+    args['split'] = 'train'
+    args['shuffle_test'] = True
+
+    test_logs = T.test(args, model_load, EvaluatorIn=evaluator)
+
+    mean = test_logs['metrics']['mean']
+    var = test_logs['metrics']['variance']
+    ft = test_logs['metrics']['ft']
+    gt = test_logs['metrics']['gt']
+    ft = torch.transpose(ft, 0, 1)
+
+    ft = ft.cpu().detach().numpy()
+    gt = gt.cpu().detach().numpy()
+    from sklearn import decomposition
+
+    pca = decomposition.PCA(n_components=3)
+    pca.fit(ft)
+    principalComponents = pca.transform(ft)
+    mean_pca = pca.transform(mean.cpu().detach().numpy())
+
+    # pca = PCA(n_components=2)
+    # principalComponents = pca.fit_transform(ft)
+    # mean_pca = pca.fit(mean.cpu().detach().numpy())
+
+
+    fig = plt.figure(figsize=(8, 8))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel('Principal Component 1', fontsize=15)
+    ax.set_ylabel('Principal Component 2', fontsize=15)
+    ax.set_title('2 component PCA', fontsize=20)
+    targets = [0]
+    #colors = ['r', 'g', 'b']
+    colors = ['r']
+    for target, color in zip(targets, colors):
+        indicesToKeep = gt == target
+        ax.scatter(principalComponents[indicesToKeep, 0],
+                   principalComponents[indicesToKeep, 1],
+                   principalComponents[indicesToKeep, 2],
+                   c=color)
+        ax.scatter(mean_pca[0, 0], mean_pca[0, 1], mean_pca[0, 2], c='g')
+
+    ax.legend(targets)
+    ax.grid()
+    plt.show()
+
+    fig = plt.figure(figsize=(8, 8))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel('Principal Component 1', fontsize=15)
+    ax.set_ylabel('Principal Component 2', fontsize=15)
+    ax.set_title('2 component PCA', fontsize=20)
+    targets = [1]
+    # colors = ['r', 'g', 'b']
+    colors = ['g']
+    for target, color in zip(targets, colors):
+        indicesToKeep = gt == target
+        ax.scatter(principalComponents[indicesToKeep, 0],
+                   principalComponents[indicesToKeep, 1],
+                   principalComponents[indicesToKeep, 2],
+                   c=color)
+        ax.scatter(mean_pca[1, 0], mean_pca[1, 1], mean_pca[1, 2], c='r')
+    ax.legend(targets)
+    ax.grid()
+    plt.show()
+
+    fig = plt.figure(figsize=(8, 8))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel('Principal Component 1', fontsize=15)
+    ax.set_ylabel('Principal Component 2', fontsize=15)
+    ax.set_title('2 component PCA', fontsize=20)
+    targets = [2]
+    # colors = ['r', 'g', 'b']
+    colors = ['b']
+    for target, color in zip(targets, colors):
+        indicesToKeep = gt == target
+        ax.scatter(principalComponents[indicesToKeep, 0],
+                   principalComponents[indicesToKeep, 1],
+                   principalComponents[indicesToKeep, 2],
+                   c=color)
+
+        ax.scatter(mean_pca[2, 0], mean_pca[2, 1], mean_pca[2, 2], c='g')
+    ax.legend(targets)
+    ax.grid()
+    plt.show()
+
+    print("done")
+
