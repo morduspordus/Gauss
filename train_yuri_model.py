@@ -67,9 +67,9 @@ def one_stage_training_gauss(args, model_load):
     args['num_epoch'] = num_epoch
 
     args['use_fixed_features'] = False
-    args['mean_requires_grad'] = False
+    args['mean_requires_grad'] = True
 
-    args['learning_rate'] = 0.000001
+    args['learning_rate'] = 0.00001
 
     args['mean'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
     args['var'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
@@ -86,11 +86,12 @@ def one_stage_training_gauss(args, model_load):
 
         args['old_mean'] = args['mean']
 
-        mean, var, class_prob = compute_means_and_var(args, model_load)
+        if iter == 0:
+            mean, var, class_prob = compute_means_and_var(args, model_load)
 
-        args['var'] = var
-        args['mean'] = mean
-        args['class_prob'] = class_prob
+            args['var'] = var
+            args['mean'] = mean
+            args['class_prob'] = class_prob
 
         m1 = mean[0, :]
         m2 = mean[1, :]
@@ -122,7 +123,7 @@ def one_stage_training_gauss(args, model_load):
             model = get_model(args)
             model_dict = model.state_dict()
             del pretrained_dict['mean']
-            del pretrained_dict['var']
+            del pretrained_dict['sigma']
             model_dict.update(pretrained_dict)
             model.load_state_dict(model_dict)
             torch.save(model.state_dict(), model_load)

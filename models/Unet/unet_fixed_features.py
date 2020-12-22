@@ -128,7 +128,7 @@ class MobileNetV2_Ft_LinearFixed(MobileNetV2_Ft):
         requires_grad = args['mean_requires_grad']
 
         self.mean = torch.nn.Parameter(args['mean'], requires_grad=requires_grad)
-        self.var = torch.nn.Parameter(args['var'], requires_grad=requires_grad)
+        self.sigma = torch.nn.Parameter(torch.sqrt(args['var']), requires_grad=requires_grad)
         self.class_prob = args['class_prob']
 
 
@@ -148,7 +148,7 @@ class MobileNetV2_Ft_LinearFixed(MobileNetV2_Ft):
 
         for cl in range(self.num_classes):
             mean_cl = self.mean[cl, :]
-            var_cl = self.var[cl, :]
+            var_cl = (self.sigma[cl, :]) ** 2
 
             loss_cl = compute_neg_log_lk(ft, mean_cl, var_cl)
 
@@ -161,5 +161,5 @@ class MobileNetV2_Ft_LinearFixed(MobileNetV2_Ft):
         res = torch.transpose(res, 1, 3)
         res = torch.transpose(res, 2, 3)
 
-        return -res, ft, self.mean, self.var, self.class_prob
+        return -res, ft, self.mean, (self.sigma) ** 2, self.class_prob
 

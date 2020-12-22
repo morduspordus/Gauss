@@ -114,8 +114,8 @@ class EvaluatorComputeMean(Evaluator):
 
         var_vector = var_vector - mean_vector ** 2
 
-        mean_of_var = torch.mean(var_vector, dim=0)
-        var_vector = mean_of_var.repeat(3, 1)
+        # mean_of_var = torch.mean(var_vector, dim=0)
+        # var_vector = mean_of_var.repeat(3, 1)
         return var_vector
 
     def class_prob(self):

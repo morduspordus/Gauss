@@ -220,16 +220,12 @@ class GaussMixtureCombined(nn.Module):
         for cl in range(self.num_classes):
             current_class = (y_gt == cl)
             ft_cl = ft[current_class, :]
-            if ft_cl.size()[0] == 0:
-                loss_cl = 0.
-            else:
-                mean_cl = mean[cl, :]
-                var_cl = var[cl, :]
+            if ft_cl.size()[0] != 0:
+                # mean_cl = mean[cl, :]
+                # var_cl = var[cl, :]
+                # loss_cl = compute_neg_log_lk(ft_cl, mean_cl, var_cl)
+                # loss_cl = loss_cl - torch.log(class_prob[cl])
 
-                loss_cl = compute_neg_log_lk(ft_cl, mean_cl, var_cl)
-                loss_cl = loss_cl - torch.log(class_prob[cl])
-
-            #####
                 out = torch.zeros([ft_cl.size()[0], self.num_classes]).to(self.device)
 
                 for cl_other in range(self.num_classes):
@@ -243,9 +239,13 @@ class GaussMixtureCombined(nn.Module):
 
                     next = next + inside_exp
 
+                    if cl_other == cl:
+                        loss_cl_new = torch.sum(next, dim=1)
+                        loss_cl_new = loss_cl_new - torch.log(class_prob[cl])
+
                     next = -next
 
-                out[:, cl_other] = torch.sum(next, dim=1)
+                    out[:, cl_other] = torch.sum(next, dim=1)
 
                 out = out + torch.log(class_prob.to(self.device))
                 max_val, _ = torch.max(out, dim=1, keepdim=True)
@@ -257,8 +257,8 @@ class GaussMixtureCombined(nn.Module):
                 max_val = torch.squeeze(max_val, dim=1)
                 out = out + max_val
 
-
-                total_loss = total_loss + torch.sum(loss_cl + out)
+                #total_loss = total_loss + torch.sum(loss_cl + out)
+                total_loss = total_loss + torch.sum(loss_cl_new + out)
 
         return total_loss/n
 
