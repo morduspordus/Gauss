@@ -19,15 +19,8 @@ import torch
 from train.train import TrainEpoch, ValidEpoch
 from utils.get_losses import get_losses
 from utils.get_model import get_model
-from utils.get_dataset import get_val_dataset
-from train.training_utils import test_with_loaded_model
-import sys
-from tqdm import tqdm as tqdm
-import torch.nn as nn
 from utils.loss_sets import gaussian_loss, gaussian_loss_with_mixture, gauss_mixture_combined
-from utils.get_dataset import *
-from segmentation_models_pytorch.utils.meter import AverageValueMeter
-import matplotlib.pyplot as plt
+
 
 
 def compute_means_and_var(args, model_load=None):
@@ -39,7 +32,6 @@ def compute_means_and_var(args, model_load=None):
 
     args_local['split'] = 'train'
 
-    #test_logs = test_on_correct_labels(args_local, model_load, evaluatorIn=evaluator)
     test_logs = T.test(args_local, model_load, EvaluatorIn=evaluator)
 
     mean = test_logs['metrics']['mean']
@@ -48,17 +40,10 @@ def compute_means_and_var(args, model_load=None):
 
     return mean, var, class_prob
 
-def compute_pair(m1, m2, v1, v2):
-
-    res = torch.abs(m1-m2)/(torch.sqrt(v1) + torch.sqrt(v2) + 0.000000001)
-    return res
-
 def one_stage_training_gauss(args, model_load):
 
     training_type = '_gauss_'
-
     output_dir = './run/experiments/models'
-
     add_to_file_path, model_save = create_file_name(args['dataset_name'], args['model_name'], args['im_size'], training_type, output_dir)
 
     num_iter = 100
@@ -77,86 +62,52 @@ def one_stage_training_gauss(args, model_load):
 
     _, args['loss_names'] = gauss_mixture_combined(args)
 
+    change_mean_from_gauss_first_iter = True
+    change_mean_from_gauss_other_iter = True
+
     for iter in range(num_iter):
-        print('\nIteration: ', iter, ' mean of mean ', torch.mean(args['mean'], dim=1))
-        print("Testing before changing mean")
+        print('\nIteration: ', iter, '****************************************')
+        print("Testing current model")
         test_logs = T.test(args, model_load)
 
-        args['old_mean'] = args['mean']
-
-        if iter == 0:
+        if (change_mean_from_gauss_first_iter and iter == 0):
             mean, var, class_prob = compute_means_and_var(args, model_load)
 
             args['var'] = var
             args['mean'] = mean
             args['class_prob'] = class_prob
 
-        m1 = mean[0, :]
-        m2 = mean[1, :]
-        m3 = mean[2, :]
+            print("Test after changing mean before any iterations")
+            test_logs = T.test(args, model_load)
 
-        v1 = var[0, :]
-        v2 = var[1, :]
-        v3 = var[2, :]
+        if iter > 0 and change_mean_from_gauss_other_iter:
+            mean, var, class_prob = compute_means_and_var(args, model_load)
 
-        d12 = compute_pair(m1, m2, v1, v2)
-        d13 = compute_pair(m1, m3, v1, v3)
-        d23 = compute_pair(m3, m2, v3, v2)
+            args['var'] = var
+            args['mean'] = mean
+            args['class_prob'] = class_prob
 
-        sorted12, _ = torch.sort(d12)
-        sorted13, _ = torch.sort(d13)
-        sorted23, _ = torch.sort(d23)
-
-        print(sorted12, 'median', sorted12[700])
-        print(sorted13, 'median', sorted13[700])
-        print(sorted23, 'median', sorted23[700])
-
-        # if iter > 0:
-        #     pretrained_dict = torch.load(model_load)
-        #     model = get_model(args)
-        #     model_dict = model.state_dict()
-        #
-        #     del pretrained_dict['mean']
-        #     del pretrained_dict['sigma']
-        #
-        #     model_dict.update(pretrained_dict)
-        #     model.load_state_dict(model_dict)
-        #     torch.save(model.state_dict(), model_load)
-
-        if iter > 0:
             pretrained_dict = torch.load(model_load)
             model = get_model(args)
             model_dict = model.state_dict()
 
-            args['mean'] = pretrained_dict['mean']
-            args['var'] = pretrained_dict['sigma'] ** 2
+            # this ensures means and variances stay as specified in args[mean] and args[var]
+            del pretrained_dict['mean']
+            del pretrained_dict['sigma']
 
-            # model_dict.update(pretrained_dict)
-            # model.load_state_dict(model_dict)
-            # torch.save(model.state_dict(), model_load)
+            model_dict.update(pretrained_dict)
+            model.load_state_dict(model_dict)
+            torch.save(model.state_dict(), model_load)
 
-        print('\nupdated mean of mean ', torch.mean(mean, dim=1))
-        print('\nmean of var', torch.mean(var, dim=1))
-
-        print("Test after changing mean")
-        test_logs = T.test(args, model_load)
+            print("Test after changing mean")
+            test_logs = T.test(args, model_load)
 
 
-        model_prev = get_model(args)
-
-        if model_load is not None:
-            model_prev.load_state_dict(torch.load(model_load))
-
-        args['model_prev'] = model_prev.to(args['device'])
-        model_prev.eval()
-        #_, args['loss_names'] = gaussian_loss_with_mixture(args)
         _, args['loss_names'] = gauss_mixture_combined(args)
 
-        valid_logs, train_logs, valid_metric = T.train_normal(args, num_epoch, model_save, model_load)
+        T.train_normal(args, num_epoch, model_save, model_load)
         model_load = model_save
 
-
-        #print("\nALl the ds: d23, d12, d13 ", d23, d12, d13)
 
 
 def train_gauss():
@@ -176,7 +127,6 @@ def train_gauss():
     args['train_batch_size'] = 2
     args['val_batch_size'] = 8
     args['main_metric'] = 'miou'
-    args['shuffle_test'] = False
 
     one_stage_training_gauss(args, model_load)
 

@@ -60,6 +60,7 @@ def get_standard_arguments(model_name, dataset_name, im_size):
     args['verbose'] = True
 
     args['shuffle_train'] = True
+    args['shuffle_test'] = False
     args['num_workers'] = 0
     args['train_batch_size'] = 16
     args['val_batch_size'] = 16

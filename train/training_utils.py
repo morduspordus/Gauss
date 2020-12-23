@@ -13,6 +13,41 @@ from metrics.evaluator import Evaluator
 import copy
 
 
+def compute_pair(m1, m2, v1, v2):
+
+    res = torch.abs(m1-m2)/(torch.sqrt(v1) + torch.sqrt(v2) + 0.000000001)
+    return res
+
+
+def analyze_mean_var(mean, var, sigma):
+
+    neg_sigma = sigma < 0
+    print("Negative sigma watch ", neg_sigma.any())
+
+    m1 = mean[0, :]
+    m2 = mean[1, :]
+    m3 = mean[2, :]
+
+    v1 = var[0, :]
+    v2 = var[1, :]
+    v3 = var[2, :]
+
+    d12 = compute_pair(m1, m2, v1, v2)
+    d13 = compute_pair(m1, m3, v1, v3)
+    d23 = compute_pair(m3, m2, v3, v2)
+
+    sorted12, _ = torch.sort(d12)
+    sorted13, _ = torch.sort(d13)
+    sorted23, _ = torch.sort(d23)
+
+    print(sorted12.data, 'median', sorted12[700].data)
+    print(sorted13.data, 'median', sorted13[700].data)
+    print(sorted23.data, 'median', sorted23[700].data)
+
+    print('\nmean of mean ', torch.mean(mean, dim=1).data)
+    print('\nmean of var', torch.mean(var, dim=1).data, '\n')
+
+
 def create_train_epoch_runner(model, evaluator, losses, optimizer, scheduler, args):
 
     train_epoch = TrainEpoch(
@@ -79,6 +114,7 @@ def train(model, optimizer, scheduler, losses, train_dataset, valid_dataset, num
     for i in range(0, num_epoch):
         if args['verbose']:
             print('\nEpoch: {}/{}'.format(i+1, num_epoch))
+            analyze_mean_var(model.mean, model.sigma ** 2, model.sigma)
 
         train_logs = train_epoch.run(train_loader)
         if args['verbose']:
