@@ -46,8 +46,8 @@ def one_stage_training_gauss(args, model_load):
     output_dir = './run/experiments/models'
     add_to_file_path, model_save = create_file_name(args['dataset_name'], args['model_name'], args['im_size'], training_type, output_dir)
 
-    num_iter = 100
-    num_epoch = 1
+    num_iter = 1
+    num_epoch = 100
 
     args['num_epoch'] = num_epoch
 
@@ -63,7 +63,7 @@ def one_stage_training_gauss(args, model_load):
     _, args['loss_names'] = gauss_mixture_combined(args)
 
     change_mean_from_gauss_first_iter = True
-    change_mean_from_gauss_other_iter = True
+    change_mean_from_gauss_other_iter = False
 
     for iter in range(num_iter):
         print('\nIteration: ', iter, '****************************************')
