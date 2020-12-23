@@ -192,8 +192,8 @@ class MeansPushLoss(nn.Module):
 
 
 
-class GaussMixtureCombined(nn.Module):
-    # first enropy verion I tried
+class GaussMixtureCombinedW(nn.Module):
+    # first working version
     __name__ = 'GaussMixtureCombined'
 
     def __init__(self, param):
@@ -259,6 +259,71 @@ class GaussMixtureCombined(nn.Module):
 
                 #total_loss = total_loss + torch.sum(loss_cl + out)
                 total_loss = total_loss + torch.sum(loss_cl_new + out)
+
+        return total_loss/n
+
+
+class GaussMixtureCombined(nn.Module):
+    # first working version
+    __name__ = 'GaussMixtureCombined'
+
+    def __init__(self, param):
+        super().__init__()
+        self.device = param['device']
+        self.num_classes = param['num_classes']
+        self.epsilon = torch.finfo(torch.float32).eps
+        self.two_times_pi = 6.28318530718
+
+    def forward(self, y_pr, y_gt, sample):
+
+        ft = y_pr[1]
+        mean = y_pr[2]
+        var = y_pr[3]
+        class_prob = y_pr[4]
+
+        [n, num_features] = ft.size()
+        var = var + self.epsilon
+
+        y_gt = torch.flatten(y_gt).long()
+
+        total_loss = 0.
+
+        for cl in range(self.num_classes):
+            current_class = (y_gt == cl)
+            ft_cl = ft[current_class, :]
+            if ft_cl.size()[0] != 0:
+
+                out = torch.zeros([ft_cl.size()[0], self.num_classes]).to(self.device)
+
+                for cl_other in range(self.num_classes):
+                    mean_cl = mean[cl_other, :]
+                    var_cl = var[cl_other, :]
+                    next = (ft_cl - mean_cl) ** 2
+                    next = next / (2 * var_cl)
+
+                    next = torch.sum(next, dim=1)
+
+                    #sigmas_cl = torch.sqrt(var_cl * self.two_times_pi)
+                    inside_exp = torch.sum((1/2) * torch.log(var_cl * self.two_times_pi))
+
+                    next = next + inside_exp
+
+                    if cl_other == cl:
+                         loss_cl = next - torch.log(class_prob[cl])
+
+                    out[:, cl_other] = -next
+
+                out = out + torch.log(class_prob.to(self.device))
+                max_val, _ = torch.max(out, dim=1, keepdim=True)
+
+                out = out - max_val
+                out = torch.exp(out)
+                out = torch.sum(out, dim=1)
+                out = torch.log(out + self.epsilon)
+                max_val = torch.squeeze(max_val, dim=1)
+                out = out + max_val
+
+                total_loss = total_loss + torch.sum(loss_cl + out)
 
         return total_loss/n
 

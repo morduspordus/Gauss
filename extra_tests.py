@@ -331,3 +331,73 @@ def visualize_pca():
 
     print("done")
 
+
+def new_test():
+
+    epsilon = torch.finfo(torch.float32).eps
+
+    r = torch.rand([24])
+
+    ft = torch.tensor(r).float()
+    ft = ft.view(6, 4)
+    num_classes = 3
+
+    # mean = torch.rand([3,4])
+    # var = torch.rand([3,4])
+    # class_prob = torch.rand([3])
+    # class_prob = class_prob/sum(class_prob)
+
+    ft = torch.tensor([[0.0535, 0.7935, 0.2525, 0.3562],
+            [0.7587, 0.0454, 0.1192, 0.0193],
+            [0.5526, 0.1416, 0.7261, 0.2430],
+            [0.1548, 0.0698, 0.1974, 0.7610],
+            [0.8434, 0.5806, 0.4745, 0.6355],
+            [0.3435, 0.8416, 0.3451, 0.8155]])
+    mean = torch.tensor([[0.0213, 0.2804, 0.3500, 0.0705],
+            [0.5077, 0.1460, 0.6972, 0.7937],
+            [0.6053, 0.5292, 0.9267, 0.7868]])
+
+    var = torch.tensor([[0.7306, 0.2218, 0.3051, 0.1479],
+            [0.5749, 0.1398, 0.1326, 0.5127],
+            [0.5174, 0.8227, 0.6534, 0.3736]])
+    class_prob = torch.tensor([0.0836, 0.0315, 0.8849])
+
+    n = 6
+
+    print(ft)
+    print(mean)
+    print(var)
+    print(class_prob)
+
+    two_times_pi = 6.28318530718
+
+    out = torch.zeros([n, num_classes])
+
+    for cl in range(num_classes):
+        mean_cl = mean[cl, :]
+        var_cl = var[cl, :]
+
+        next = (ft - mean_cl) ** 2
+        next = next / (2 * var_cl)
+
+        sigmas_cl = torch.sqrt(var_cl * two_times_pi)
+        inside_exp = torch.log(sigmas_cl)
+
+        next = next + inside_exp
+
+        next = -next
+
+        out[:, cl] = torch.sum(next, dim=1)
+
+    out = out + torch.log(class_prob)
+    max_val, _ = torch.max(out, dim=1, keepdim=True)
+
+    out = out - max_val
+    out = torch.exp(out)
+    out = torch.sum(out, dim=1)
+    out = torch.log(out + epsilon)
+    max_val = torch.squeeze(max_val, dim=1)
+    out = out + max_val
+    out = torch.mean(out)
+    print(out)
+
