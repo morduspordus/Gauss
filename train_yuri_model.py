@@ -54,10 +54,14 @@ def one_stage_training_gauss(args, model_load):
     args['use_fixed_features'] = False
     args['mean_requires_grad'] = True
 
-    args['learning_rate'] = 0.00001
+    args['learning_rate'] = 0.00001 #Max metric score: 0.8738366961479187
 
-    args['mean'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
-    args['var'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
+    # args['mean'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
+    # args['var'] = torch.rand(args['num_classes'], args['num_features'])  # value is not important, for inititalization
+
+    args['mean'] = torch.zeros(args['num_classes'], args['num_features'])  # value is not important, for inititalization
+    args['var'] = torch.ones(args['num_classes'], args['num_features'])  # value is not important, for inititalization
+
     args['class_prob'] = torch.zeros(args['num_classes']) + 1/args['num_classes']
 
     _, args['loss_names'] = gauss_mixture_combined(args)
@@ -73,7 +77,9 @@ def one_stage_training_gauss(args, model_load):
         if (change_mean_from_gauss_first_iter and iter == 0):
             mean, var, class_prob = compute_means_and_var(args, model_load)
 
-            args['var'] = var
+            #args['var'] = var
+            args['var'] = torch.zeros(args['num_classes'], args['num_features'])  # value is not important, for inititalization
+
             args['mean'] = mean
             args['class_prob'] = class_prob
 

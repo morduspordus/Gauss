@@ -124,7 +124,6 @@ class TrainEpoch(Epoch):
         for (k, v) in losses.items():
             loss = loss + v
 
-
         loss.backward()
 
         self.optimizer.step()
@@ -153,6 +152,7 @@ class ValidEpoch(Epoch):
        self.evaluator.reset()
 
     def batch_update(self, x, y, sample):
+
         with torch.no_grad():
             prediction = self.model.forward(x)
 

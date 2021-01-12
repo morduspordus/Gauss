@@ -42,7 +42,7 @@ def one_stage_training_with_args(model_name, dataset_name, im_size, model_load, 
 
     add_to_file_path, model_save = create_file_name(dataset_name, model_name, im_size, training_type, output_dir)
 
-    num_epoch = 20
+    num_epoch = 100
     args['use_fixed_features'] = False
     args['num_epoch'] = num_epoch
     args['model_load'] = model_load

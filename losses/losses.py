@@ -18,7 +18,7 @@ class MixtureLossWithModelPrev(nn.Module):
 
         ft = y_pr[1]
         mean = y_pr[2]
-        var = y_pr[3]
+        sigma = y_pr[3]
         class_prob = y_pr[4]
         x = sample['image']
 
@@ -26,7 +26,8 @@ class MixtureLossWithModelPrev(nn.Module):
         ft_old = prediction[1]
 
         [n, num_features] = ft.size()
-        var = var + self.epsilon
+        sigma = sigma + self.epsilon
+        var = sigma ** 2
 
         out = torch.zeros([n, self.num_classes]).to(self.device)
 
@@ -73,11 +74,13 @@ class MixtureLossFirstVersion(nn.Module):
 
         ft = y_pr[1]
         mean = y_pr[2]
-        var = y_pr[3]
+        sigma = y_pr[3]
         class_prob = y_pr[4]
 
         [n, num_features] = ft.size()
-        var = var + self.epsilon
+
+        sigma = sigma + self.epsilon
+        var = sigma ** 2
 
         out = torch.zeros([n, self.num_classes]).to(self.device)
 
@@ -117,18 +120,21 @@ class GaussianLoss(nn.Module):
         super().__init__()
         self.device = param['device']
         self.num_classes = param['num_classes']
-        self.epsilon = torch.finfo(torch.float32).eps
+        #self.epsilon = torch.finfo(torch.float32).eps
+        self.epsilon = 1.0e-20
         self.sqrt_2_times_pi = 2.50662827463
 
     def forward(self, y_pr, y_gt, sample):
 
         ft = y_pr[1]
         mean = y_pr[2]
-        var = y_pr[3]
+        sigma = y_pr[3]
         class_prob = y_pr[4]
 
         y_gt = torch.flatten(y_gt).long()
 
+        sigma = sigma + self.epsilon
+        var = sigma ** 2
         loss = 0
 
         [n, c] = ft.size()
@@ -200,18 +206,20 @@ class GaussMixtureCombined(nn.Module):
         super().__init__()
         self.device = param['device']
         self.num_classes = param['num_classes']
-        self.epsilon = torch.finfo(torch.float32).eps
+        #self.epsilon = 1.0e-10
+        self.epsilon = 1.
         self.two_times_pi = 6.28318530718
 
     def forward(self, y_pr, y_gt, sample):
 
         ft = y_pr[1]
         mean = y_pr[2]
-        var = y_pr[3]
+        sigma = y_pr[3]
         class_prob = y_pr[4]
 
         [n, num_features] = ft.size()
-        var = var + self.epsilon
+        sigma = sigma + self.epsilon
+        var = sigma ** 2
 
         y_gt = torch.flatten(y_gt).long()
 
@@ -257,24 +265,27 @@ class GaussMixtureCombined(nn.Module):
 
 
 class GaussMixtureCombinedW(nn.Module):
-    # first working version
+
     __name__ = 'GaussMixtureCombined'
 
     def __init__(self, param):
         super().__init__()
         self.device = param['device']
         self.num_classes = param['num_classes']
-        self.epsilon = torch.finfo(torch.float32).eps
+        # self.epsilon = torch.finfo(torch.float32).eps
+        self.epsilon = 10.0
 
     def forward(self, y_pr, y_gt, sample):
 
         ft = y_pr[1]
         mean = y_pr[2]
-        var = y_pr[3]
+        sigma = y_pr[3]
         class_prob = y_pr[4]
 
         [n, num_features] = ft.size()
-        var = var + self.epsilon
+        sigma = sigma + self.epsilon
+
+        var = sigma ** 2
 
         y_gt = torch.flatten(y_gt).long()
 
@@ -288,7 +299,7 @@ class GaussMixtureCombinedW(nn.Module):
                 out = torch.zeros([ft_cl.size()[0]]).to(self.device)
                 mean_correct = mean[cl, :]
                 var_correct = var[cl, :]
-                prob_correct = class_prob[cl]
+                sigma_correct = sigma[cl, :]
 
                 to_add = (ft_cl - mean_correct) ** 2
                 to_add = to_add / (2 * var_correct)
@@ -297,13 +308,15 @@ class GaussMixtureCombinedW(nn.Module):
                     if cl_other != cl:
                         mean_cl = mean[cl_other, :]
                         var_cl = var[cl_other, :]
+                        sigma_cl = sigma[cl_other, :]
                         next = (ft_cl - mean_cl) ** 2
                         next = next / (2 * var_cl)
                         next = -next + to_add
                         next = torch.sum(next, dim=1)
                         next = torch.exp(next)
-                        var_multiply = torch.prod(var_correct/var_cl)
+                        var_multiply = torch.prod(sigma_correct/sigma_cl)
                         next = next * var_multiply
+                        #next = torch.prod(next, dim=1)
                         next = next * (class_prob[cl_other] / class_prob[cl])
 
                         out = out + next
